@@ -6,6 +6,7 @@ import { MatCardModule } from '@angular/material/card';
 import { NgxEchartsDirective, provideEchartsCore } from 'ngx-echarts';
 import { echarts } from '../../core/providers/echarts-setup';
 import { ApiService } from '../../core/services/api.service';
+import { ExcelExportService } from '../../core/services/excel-export.service';
 import { SignalRService } from '../../core/services/signalr.service';
 import { DashboardSummary } from '../../core/types/api.types';
 import type { EChartsOption } from 'echarts';
@@ -317,7 +318,7 @@ export class ExecutiveDashboardComponent implements OnInit {
   trendChart = signal<EChartsOption>({});
   agentChart = signal<EChartsOption>({});
 
-  constructor(private api: ApiService, private signalR: SignalRService) {}
+  constructor(private api: ApiService, private signalR: SignalRService, private excel: ExcelExportService) {}
 
   ngOnInit() { this.loadData(); }
 
@@ -381,24 +382,6 @@ export class ExecutiveDashboardComponent implements OnInit {
   exportData() {
     const s = this.summary();
     if (!s) return;
-    const csv = [
-      'Metric,Value',
-      `Total Savings Identified,${s.totalSavingsIdentified}`,
-      `Total Savings Realized,${s.totalSavingsRealized}`,
-      `Pending Proposals,${s.pendingProposals}`,
-      `Executed Actions,${s.executedProposals}`,
-      '',
-      'Agent,Total Savings,Count',
-      ...s.savingsByAgent.map(a => `${a.agentType},${a.totalSavings},${a.count}`),
-      '',
-      'Finding,Agent,Savings,Risk,Status',
-      ...s.topFindings.map(f => `"${f.title}",${f.agentType},${f.estimatedSavings},${f.riskLevel},${f.status}`),
-    ].join('\n');
-
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = `costpilot-report-${new Date().toISOString().slice(0,10)}.csv`;
-    a.click(); URL.revokeObjectURL(url);
+    this.excel.exportDashboardReport(s);
   }
 }

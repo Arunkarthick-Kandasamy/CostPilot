@@ -22,6 +22,8 @@
     "@angular/router": "^17.3.0",
     "@microsoft/signalr": "^10.0.0",
     "echarts": "^6.0.0",
+    "exceljs": "^4.4.0",
+    "file-saver": "^2.0.5",
     "ngx-echarts": "^17.2.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",

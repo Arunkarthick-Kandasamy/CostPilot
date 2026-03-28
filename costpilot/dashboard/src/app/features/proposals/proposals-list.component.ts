@@ -10,6 +10,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
+import { ExcelExportService } from '../../core/services/excel-export.service';
 import { Proposal } from '../../core/types/api.types';
 
 @Component({
@@ -24,7 +25,7 @@ import { Proposal } from '../../core/types/api.types';
       </div>
       <div class="header-actions">
         <button class="btn-export" (click)="exportCSV()">
-          <mat-icon>download</mat-icon> Export CSV
+          <mat-icon>download</mat-icon> Export Excel
         </button>
       </div>
     </div>
@@ -171,7 +172,7 @@ export class ProposalsListComponent implements OnInit {
   statusFilter = '';
   agentFilter = '';
 
-  constructor(private api: ApiService) {}
+  constructor(private api: ApiService, private excel: ExcelExportService) {}
   ngOnInit() { this.load(); }
 
   load() {
@@ -198,14 +199,6 @@ export class ProposalsListComponent implements OnInit {
   }
 
   exportCSV() {
-    const rows = this.proposals();
-    const csv = ['Title,Agent,Savings,Risk,Status', ...rows.map(p =>
-      `"${p.title}",${p.agentType},${p.estimatedSavings},${p.riskLevel},${p.status}`)
-    ].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `proposals-${new Date().toISOString().slice(0,10)}.csv`;
-    a.click();
+    this.excel.exportProposals(this.proposals());
   }
 }
