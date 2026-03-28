@@ -42,7 +42,7 @@ def run_spend_analysis() -> list[dict]:
             SELECT a.vendor_id, v.name, a.amount, COUNT(*) as dup_count
             FROM invoices a
             JOIN invoices b ON a.vendor_id = b.vendor_id AND a.amount = b.amount AND a.id < b.id
-                AND ABS(EXTRACT(DAY FROM a.invoice_date - b.invoice_date)) < 30
+                AND ABS(a.invoice_date - b.invoice_date) < 30
             JOIN vendors v ON v.id = a.vendor_id
             GROUP BY a.vendor_id, v.name, a.amount
             ORDER BY a.amount DESC
