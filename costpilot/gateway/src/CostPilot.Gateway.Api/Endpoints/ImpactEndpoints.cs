@@ -46,24 +46,29 @@ public static class ImpactEndpoints
 
         group.MapGet("/comparison", async (CostPilotDbContext db) =>
         {
-            var executed = await db.ActionProposals
-                .Where(p => p.Status == ProposalStatus.Executed)
+            var raw = await db.ActionProposals
+                .Where(p => p.Status == ProposalStatus.Executed && p.EstimatedSavings > 0)
                 .Include(p => p.Impacts)
-                .Select(p => new
+                .OrderByDescending(p => p.EstimatedSavings)
+                .ToListAsync();
+
+            var executed = raw.Select(p =>
+            {
+                var actual = p.Impacts.Sum(i => i.ActualSavings);
+                return new
                 {
                     p.Id,
                     p.Title,
                     AgentType = p.AgentType.ToString(),
                     p.EstimatedSavings,
-                    ActualSavings = p.Impacts.Sum(i => i.ActualSavings),
-                    Variance = p.Impacts.Sum(i => i.ActualSavings) - p.EstimatedSavings,
+                    ActualSavings = actual,
+                    Variance = actual - p.EstimatedSavings,
                     VariancePct = p.EstimatedSavings > 0
-                        ? Math.Round((double)((p.Impacts.Sum(i => i.ActualSavings) - p.EstimatedSavings) / p.EstimatedSavings * 100), 1)
-                        : 0,
+                        ? Math.Round((double)((actual - p.EstimatedSavings) / p.EstimatedSavings * 100), 1)
+                        : 0.0,
                     p.ExecutedAt
-                })
-                .OrderByDescending(p => p.EstimatedSavings)
-                .ToListAsync();
+                };
+            }).ToList();
 
             var totalEstimated = executed.Sum(e => e.EstimatedSavings);
             var totalActual = executed.Sum(e => e.ActualSavings);
