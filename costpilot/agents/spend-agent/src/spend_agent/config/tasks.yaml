@@ -1,0 +1,38 @@
+detect_anomalies:
+  description: >
+    Analyze the latest procurement data to find anomalies:
+    1. Query purchase orders from the database
+    2. Identify price spikes (>15% above average for same item)
+    3. Find volume anomalies (orders 2x above normal)
+    4. Detect seasonal deviations
+    Report each anomaly with estimated financial impact.
+  expected_output: >
+    A JSON list of anomalies, each with: vendor_id, description,
+    financial_impact (dollars), confidence (0-1), and evidence.
+  agent: anomaly_detector
+
+find_duplicates:
+  description: >
+    Search for duplicate costs in the procurement data:
+    1. Query recent invoices and purchase orders
+    2. Find duplicate invoice numbers or amounts from same vendor
+    3. Identify overlapping contracts for similar services
+    4. Flag redundant subscriptions across teams
+    Report each duplicate with the amount being wasted.
+  expected_output: >
+    A JSON list of duplicates, each with: type (invoice/contract/subscription),
+    vendor_id, amount, description, and confidence (0-1).
+  agent: duplicate_finder
+
+optimize_rates:
+  description: >
+    Compare current vendor rates against market benchmarks:
+    1. Query current vendor contracts and their rates
+    2. Compare against market benchmark data
+    3. Calculate potential savings from renegotiation
+    4. Prioritize by savings opportunity
+    Report each opportunity with estimated annual savings.
+  expected_output: >
+    A JSON list of opportunities, each with: vendor_id, current_rate,
+    market_rate, annual_savings, and renegotiation_priority (high/medium/low).
+  agent: rate_optimizer
