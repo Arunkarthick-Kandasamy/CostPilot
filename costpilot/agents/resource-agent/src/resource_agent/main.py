@@ -7,41 +7,53 @@ from datetime import datetime
 from decimal import Decimal
 
 from fastapi import FastAPI
+from costpilot_common.config import ANTHROPIC_API_KEY
 from costpilot_common.messaging import publish_proposal, publish_insight, publish_alert
 from costpilot_common.schemas import ProposalSchema, InsightSchema, AlertSchema
-from resource_agent.crew import create_resource_crew
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 AGENT_NAME = "resource"
 SCAN_INTERVAL = int(os.environ.get("SCAN_INTERVAL_SECONDS", "300"))
+USE_AI = bool(ANTHROPIC_API_KEY)
 
-# Scheduled scan state
 last_run_time: datetime | None = None
 next_run_time: datetime | None = None
 run_count: int = 0
 is_running: bool = False
 
 
+def run_analysis_demo():
+    """Run SQL-based analysis (no LLM needed)."""
+    from costpilot_common.demo_analysis import run_resource_analysis
+    return run_resource_analysis()
+
+
+def run_analysis_ai():
+    """Run CrewAI-based analysis (needs API key)."""
+    from resource_agent.crew import create_resource_crew
+    crew = create_resource_crew()
+    result = crew.kickoff()
+    try:
+        return json.loads(result.raw) if isinstance(result.raw, str) else [result.raw]
+    except (json.JSONDecodeError, TypeError):
+        return [{"description": str(result.raw), "financial_impact": 0}]
+
+
 async def scheduled_scan():
-    """Background task that runs resource analysis on a schedule."""
     global last_run_time, next_run_time, run_count, is_running
-    await asyncio.sleep(10)  # initial delay before first scan
+    await asyncio.sleep(10)
     while True:
-        next_run_time = datetime.utcnow()
         try:
             if not is_running:
                 is_running = True
-                logger.info("Scheduled resource scan #%d starting...", run_count + 1)
-                # NOTE: actual CrewAI crew execution is disabled (no API key configured).
-                # When ready, uncomment the crew call below:
-                # crew = create_resource_crew()
-                # result = crew.kickoff()
-                logger.info("Scheduled resource scan would run analysis here (crew execution disabled)")
+                logger.info("Scheduled resource scan #%d starting (mode: %s)...", run_count + 1, "AI" if USE_AI else "demo")
+                findings = run_analysis_ai() if USE_AI else run_analysis_demo()
+                publish_findings(findings)
                 last_run_time = datetime.utcnow()
                 run_count += 1
-                logger.info("Scheduled resource scan #%d completed", run_count)
+                logger.info("Scheduled resource scan #%d completed — %d findings", run_count, len(findings))
                 is_running = False
         except Exception as e:
             logger.error("Scheduled resource scan failed: %s", e)
@@ -50,9 +62,40 @@ async def scheduled_scan():
         await asyncio.sleep(SCAN_INTERVAL)
 
 
+def publish_findings(findings: list[dict]):
+    for f in findings:
+        impact = Decimal(str(f.get("financial_impact", 0)))
+        if impact > 0:
+            publish_proposal(ProposalSchema(
+                agent_type="Resource",
+                title=f"Resource: {f.get('description', 'Optimization opportunity')[:120]}",
+                description=f.get("description", json.dumps(f)),
+                estimated_savings=impact,
+                risk_level="Low" if impact < 60000 else "Medium",
+                evidence=f,
+            ))
+        publish_insight(InsightSchema(
+            source_agent="Resource",
+            insight_type=f.get("type", "underutilized"),
+            entity_type=f.get("resource_type", "resource"),
+            entity_id=str(f.get("resource_id", "unknown")),
+            summary=f.get("description", str(f))[:500],
+            financial_impact=impact,
+            confidence=Decimal(str(f.get("confidence", 0.85))),
+            related_data=f,
+        ))
+
+    publish_alert(AlertSchema(
+        agent_type="Resource",
+        severity="Info",
+        title="Resource analysis completed",
+        message=f"Found {len(findings)} findings across resource data",
+    ))
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Resource Optimization Agent starting with %ds scan interval...", SCAN_INTERVAL)
+    logger.info("Resource Optimization Agent starting (mode: %s, interval: %ds)...", "AI" if USE_AI else "DEMO", SCAN_INTERVAL)
     task = asyncio.create_task(scheduled_scan())
     yield
     task.cancel()
@@ -63,72 +106,35 @@ app = FastAPI(title="Resource Optimization Agent", lifespan=lifespan)
 
 @app.get("/health")
 def health():
-    return {"status": "healthy", "agent": AGENT_NAME, "timestamp": datetime.utcnow().isoformat()}
+    return {"status": "healthy", "agent": AGENT_NAME, "mode": "ai" if USE_AI else "demo", "timestamp": datetime.utcnow().isoformat()}
 
 
 @app.get("/status")
 def status():
     return {
-        "agent": AGENT_NAME,
+        "agent": AGENT_NAME, "mode": "ai" if USE_AI else "demo",
         "status": "running" if is_running else "idle",
         "lastRunTime": last_run_time.isoformat() if last_run_time else None,
-        "nextRunTime": next_run_time.isoformat() if next_run_time else None,
-        "runCount": run_count,
-        "scanIntervalSeconds": SCAN_INTERVAL,
-        "timestamp": datetime.utcnow().isoformat(),
+        "runCount": run_count, "scanIntervalSeconds": SCAN_INTERVAL,
     }
 
 
 @app.post("/run")
-async def run_analysis():
-    logger.info("Starting resource analysis...")
+async def run_now():
+    global last_run_time, run_count, is_running
+    if is_running:
+        return {"status": "already_running"}
+    is_running = True
     try:
-        crew = create_resource_crew()
-        result = crew.kickoff()
-
-        try:
-            findings = json.loads(result.raw) if isinstance(result.raw, str) else result.raw
-        except (json.JSONDecodeError, TypeError):
-            findings = [{"description": result.raw, "monthly_savings": 0}]
-
-        for finding in findings if isinstance(findings, list) else [findings]:
-            savings = Decimal(str(finding.get("monthly_savings", finding.get("waste_amount", 0))))
-            annual = savings * 12
-
-            if savings > 0:
-                publish_proposal(ProposalSchema(
-                    agent_type="Resource",
-                    title=f"Resource optimization: {finding.get('action', finding.get('description', 'Consolidation opportunity'))[:100]}",
-                    description=json.dumps(finding),
-                    estimated_savings=annual,
-                    risk_level="Low" if savings < 5000 else "Medium",
-                    evidence=finding,
-                ))
-
-            publish_insight(InsightSchema(
-                source_agent="Resource",
-                insight_type=finding.get("type", "underutilized"),
-                entity_type=finding.get("resource_type", "resource"),
-                entity_id=str(finding.get("resource_id", finding.get("name", "unknown"))),
-                summary=finding.get("description", str(finding))[:500],
-                financial_impact=annual,
-                confidence=Decimal(str(finding.get("confidence", 0.85))),
-                related_data=finding,
-            ))
-
-        publish_alert(AlertSchema(
-            agent_type="Resource", severity="Info",
-            title="Resource analysis completed",
-            message=f"Found {len(findings) if isinstance(findings, list) else 1} findings",
-        ))
-        return {"status": "completed", "findings_count": len(findings) if isinstance(findings, list) else 1}
-
+        findings = run_analysis_ai() if USE_AI else run_analysis_demo()
+        publish_findings(findings)
+        last_run_time = datetime.utcnow()
+        run_count += 1
+        is_running = False
+        return {"status": "completed", "mode": "ai" if USE_AI else "demo", "findings": len(findings)}
     except Exception as e:
-        logger.error("Resource analysis failed: %s", e)
-        publish_alert(AlertSchema(
-            agent_type="Resource", severity="Critical",
-            title="Resource analysis failed", message=str(e),
-        ))
+        is_running = False
+        logger.error("Analysis failed: %s", e)
         return {"status": "failed", "error": str(e)}
 
 
