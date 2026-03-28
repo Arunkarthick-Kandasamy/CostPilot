@@ -1,4 +1,5 @@
 using System.Text;
+using CostPilot.Gateway.Api.Endpoints;
 using CostPilot.Gateway.Api.Hubs;
 using CostPilot.Gateway.Api.Services;
 using CostPilot.Gateway.Infrastructure.Data;
@@ -77,6 +78,14 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapHub<NotificationHub>("/hubs/notifications");
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
+
+// Map endpoints
+app.MapAuthEndpoints();
+app.MapProposalEndpoints();
+app.MapDashboardEndpoints();
+app.MapAgentEndpoints();
+app.MapInsightEndpoints();
+app.MapImpactEndpoints();
 
 if (app.Environment.IsDevelopment())
 {
