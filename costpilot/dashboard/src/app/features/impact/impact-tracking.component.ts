@@ -41,6 +41,16 @@ import type { EChartsOption } from 'echarts';
       </mat-card>
     </div>
 
+    <mat-card class="anim-in anim-d3">
+      <div class="card-head">
+        <div>
+          <div class="card-title">ESTIMATED VS ACTUAL</div>
+          <div class="card-subtitle">Accuracy of cost predictions</div>
+        </div>
+      </div>
+      <div echarts [options]="comparisonChart()" style="height: 320px; padding: 0 16px;"></div>
+    </mat-card>
+
     @if (totalRealized() === 0) {
       <mat-card class="anim-in anim-d3">
         <div class="empty-state">
@@ -85,10 +95,27 @@ import type { EChartsOption } from 'echarts';
 export class ImpactTrackingComponent implements OnInit {
   totalRealized = signal(0);
   monthlyChart = signal<EChartsOption>({});
+  comparisonChart = signal<EChartsOption>({});
 
   constructor(private api: ApiService) {}
 
   ngOnInit() {
+    this.api.getImpactComparison().subscribe(data => {
+      if (data.items.length > 0) {
+        this.comparisonChart.set({
+          tooltip: { trigger: 'axis' },
+          legend: { data: ['Estimated', 'Actual'], bottom: 0 },
+          grid: { left: 70, right: 20, top: 20, bottom: 40 },
+          xAxis: { type: 'category', data: data.items.map((i: any) => i.title.substring(0, 25) + '...'), axisLabel: { color: '#9ca3af', fontSize: 10, rotate: 25 } },
+          yAxis: { type: 'value', axisLabel: { color: '#9ca3af', fontSize: 10, fontFamily: 'IBM Plex Mono', formatter: (v: number) => '$' + (v >= 1000 ? (v/1000).toFixed(0) + 'K' : v) }, splitLine: { lineStyle: { color: '#f3f4f6' } } },
+          series: [
+            { name: 'Estimated', type: 'bar', data: data.items.map((i: any) => i.estimatedSavings), itemStyle: { color: '#6366f1', borderRadius: [4,4,0,0] } },
+            { name: 'Actual', type: 'bar', data: data.items.map((i: any) => i.actualSavings), itemStyle: { color: '#10b981', borderRadius: [4,4,0,0] } },
+          ],
+        });
+      }
+    });
+
     this.api.getImpactSummary().subscribe(data => {
       this.totalRealized.set(data.totalRealized);
       this.monthlyChart.set({

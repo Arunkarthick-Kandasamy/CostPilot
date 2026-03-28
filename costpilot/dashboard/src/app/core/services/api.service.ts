@@ -60,4 +60,44 @@ export class ApiService {
   getImpactSummary() {
     return this.http.get<{ totalRealized: number; byMonth: { year: number; month: number; total: number }[] }>('/api/impacts/summary');
   }
+
+  getOperationalStats() {
+    return this.http.get<Record<string, number>>('/api/data/stats');
+  }
+
+  getVendors() {
+    return this.http.get<{ total: number; items: any[] }>('/api/data/vendors');
+  }
+
+  getPurchaseOrders(page = 1, size = 20) {
+    return this.http.get<{ total: number; items: any[] }>('/api/data/purchase-orders', { params: { page, size } });
+  }
+
+  getInvoices(page = 1, size = 20) {
+    return this.http.get<{ total: number; items: any[] }>('/api/data/invoices', { params: { page, size } });
+  }
+
+  getSLAServices() {
+    return this.http.get<{ total: number; items: any[] }>('/api/data/services');
+  }
+
+  getServers() {
+    return this.http.get<{ total: number; items: any[] }>('/api/data/servers');
+  }
+
+  getSoftwareTools() {
+    return this.http.get<{ total: number; items: any[] }>('/api/data/software-tools');
+  }
+
+  getBudgetVsActual() {
+    return this.http.get<{ total: number; items: any[] }>('/api/data/budget-vs-actual');
+  }
+
+  getImpactComparison() {
+    return this.http.get<{ totalEstimated: number; totalActual: number; variance: number; items: any[] }>('/api/impacts/comparison');
+  }
+
+  getAuditLog(page = 1, size = 50) {
+    return this.http.get<{ total: number; items: any[] }>('/api/audit', { params: { page, size } });
+  }
 }
