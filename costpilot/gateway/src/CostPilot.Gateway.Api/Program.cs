@@ -61,6 +61,9 @@ builder.Services.AddMassTransit(x =>
     });
 });
 
+// Correlation Engine
+builder.Services.AddScoped<CorrelationEngine>();
+
 // SignalR
 builder.Services.AddSignalR();
 
@@ -92,6 +95,7 @@ if (app.Environment.IsDevelopment())
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<CostPilotDbContext>();
     await db.Database.MigrateAsync();
+    await CostPilot.Gateway.Infrastructure.Seed.DbSeeder.SeedAsync(db);
 }
 
 app.Run();
