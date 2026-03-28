@@ -1,5 +1,7 @@
+import asyncio
 import json
 import logging
+import os
 from contextlib import asynccontextmanager
 from datetime import datetime
 from decimal import Decimal
@@ -12,11 +14,48 @@ from resource_agent.crew import create_resource_crew
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+AGENT_NAME = "resource"
+SCAN_INTERVAL = int(os.environ.get("SCAN_INTERVAL_SECONDS", "300"))
+
+# Scheduled scan state
+last_run_time: datetime | None = None
+next_run_time: datetime | None = None
+run_count: int = 0
+is_running: bool = False
+
+
+async def scheduled_scan():
+    """Background task that runs resource analysis on a schedule."""
+    global last_run_time, next_run_time, run_count, is_running
+    await asyncio.sleep(10)  # initial delay before first scan
+    while True:
+        next_run_time = datetime.utcnow()
+        try:
+            if not is_running:
+                is_running = True
+                logger.info("Scheduled resource scan #%d starting...", run_count + 1)
+                # NOTE: actual CrewAI crew execution is disabled (no API key configured).
+                # When ready, uncomment the crew call below:
+                # crew = create_resource_crew()
+                # result = crew.kickoff()
+                logger.info("Scheduled resource scan would run analysis here (crew execution disabled)")
+                last_run_time = datetime.utcnow()
+                run_count += 1
+                logger.info("Scheduled resource scan #%d completed", run_count)
+                is_running = False
+        except Exception as e:
+            logger.error("Scheduled resource scan failed: %s", e)
+            is_running = False
+        next_run_time = datetime.utcnow()
+        await asyncio.sleep(SCAN_INTERVAL)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Resource Optimization Agent starting...")
+    logger.info("Resource Optimization Agent starting with %ds scan interval...", SCAN_INTERVAL)
+    task = asyncio.create_task(scheduled_scan())
     yield
+    task.cancel()
 
 
 app = FastAPI(title="Resource Optimization Agent", lifespan=lifespan)
@@ -24,7 +63,20 @@ app = FastAPI(title="Resource Optimization Agent", lifespan=lifespan)
 
 @app.get("/health")
 def health():
-    return {"status": "healthy", "agent": "resource", "timestamp": datetime.utcnow().isoformat()}
+    return {"status": "healthy", "agent": AGENT_NAME, "timestamp": datetime.utcnow().isoformat()}
+
+
+@app.get("/status")
+def status():
+    return {
+        "agent": AGENT_NAME,
+        "status": "running" if is_running else "idle",
+        "lastRunTime": last_run_time.isoformat() if last_run_time else None,
+        "nextRunTime": next_run_time.isoformat() if next_run_time else None,
+        "runCount": run_count,
+        "scanIntervalSeconds": SCAN_INTERVAL,
+        "timestamp": datetime.utcnow().isoformat(),
+    }
 
 
 @app.post("/run")
