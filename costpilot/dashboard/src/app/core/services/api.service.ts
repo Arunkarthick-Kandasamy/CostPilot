@@ -14,10 +14,10 @@ export class ApiService {
     return this.http.get<SavingsTrend[]>('/api/dashboard/savings-trend', { params: { months } });
   }
 
-  getProposals(page = 1, pageSize = 20, status?: string, agentType?: string) {
-    let params = new HttpParams().set('page', page).set('pageSize', pageSize);
+  getProposals(page = 1, size = 20, status?: string, agent?: string) {
+    let params = new HttpParams().set('page', page).set('size', size);
     if (status) params = params.set('status', status);
-    if (agentType) params = params.set('agentType', agentType);
+    if (agent) params = params.set('agent', agent);
     return this.http.get<PaginatedResponse<Proposal>>('/api/proposals', { params });
   }
 
