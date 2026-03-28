@@ -7,7 +7,7 @@ import psycopg2
 
 DATABASE_URL = os.environ.get(
     "DATABASE_URL",
-    "postgresql://costpilot:costpilot_dev@localhost:5432/costpilot"
+    "postgresql://postgres:postgres@localhost:5432/costpilot"
 )
 
 

@@ -1,5 +1,229 @@
 @use '@angular/material' as mat;
 
-html, body { height: 100%; margin: 0; font-family: Roboto, sans-serif; }
+:root {
+  --bg-page: #f8f9fc;
+  --bg-white: #ffffff;
+  --bg-sidebar: #1b1f2e;
+  --bg-sidebar-hover: rgba(255,255,255,0.06);
+  --bg-sidebar-active: rgba(99,102,241,0.15);
+  --bg-subtle: #f1f3f9;
+  --bg-hover: #f4f6fb;
 
-h2 { margin-top: 0; margin-bottom: 16px; font-weight: 500; }
+  --border: #e5e7eb;
+  --border-light: #f0f1f5;
+
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --text-muted: #9ca3af;
+  --text-sidebar: #94a3b8;
+  --text-sidebar-active: #ffffff;
+
+  --brand: #6366f1;
+  --brand-light: #eef2ff;
+  --brand-dark: #4f46e5;
+  --green: #10b981;
+  --green-bg: #ecfdf5;
+  --green-border: #a7f3d0;
+  --amber: #f59e0b;
+  --amber-bg: #fffbeb;
+  --amber-border: #fde68a;
+  --red: #ef4444;
+  --red-bg: #fef2f2;
+  --red-border: #fecaca;
+  --blue: #3b82f6;
+  --blue-bg: #eff6ff;
+  --blue-border: #bfdbfe;
+
+  --agent-spend: #10b981;
+  --agent-sla: #ef4444;
+  --agent-resource: #3b82f6;
+  --agent-finops: #f59e0b;
+
+  --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+
+  --shadow-xs: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
+  --shadow-lg: 0 12px 32px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  height: 100%; margin: 0;
+  font-family: var(--font-sans);
+  background: var(--bg-page);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5 {
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+h2 {
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 20px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+/* Card overrides */
+.mat-mdc-card {
+  background: var(--bg-white) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-sm) !important;
+  color: var(--text-primary) !important;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.mat-mdc-card:hover {
+  box-shadow: var(--shadow-md) !important;
+}
+.mat-mdc-card-header { padding: 20px 24px 0 !important; }
+.mat-mdc-card-title {
+  font-family: var(--font-sans) !important;
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  color: var(--text-muted) !important;
+}
+.mat-mdc-card-content { padding: 16px 24px 20px !important; }
+
+/* Table */
+.mat-mdc-table { background: transparent !important; }
+.mat-mdc-header-cell {
+  font-family: var(--font-mono) !important;
+  font-size: 0.68rem !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.08em !important;
+  color: var(--text-muted) !important;
+  border-bottom: 2px solid var(--border) !important;
+  padding: 12px 16px !important;
+}
+.mat-mdc-cell {
+  font-size: 0.875rem !important;
+  color: var(--text-primary) !important;
+  border-bottom-color: var(--border-light) !important;
+  padding: 14px 16px !important;
+}
+.mat-mdc-row:hover { background: var(--bg-hover) !important; }
+
+/* Chips */
+.mat-mdc-chip {
+  font-family: var(--font-mono) !important;
+  font-size: 0.68rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.03em !important;
+  border-radius: 6px !important;
+  height: 24px !important;
+}
+
+/* Lists */
+.mat-mdc-list-item { color: var(--text-primary) !important; }
+
+/* Toolbar */
+.mat-toolbar {
+  background: var(--bg-white) !important;
+  color: var(--text-primary) !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+
+/* Select */
+.mat-mdc-select-panel { background: var(--bg-white) !important; }
+.mat-mdc-option { color: var(--text-primary) !important; }
+
+/* Tabs */
+.mat-mdc-tab { color: var(--text-secondary) !important; }
+.mat-mdc-tab.mdc-tab--active { color: var(--brand) !important; }
+.mdc-tab-indicator__content--underline { border-color: var(--brand) !important; }
+
+/* Form fields */
+.mat-mdc-form-field {
+  --mdc-outlined-text-field-outline-color: var(--border);
+  --mdc-outlined-text-field-hover-outline-color: var(--brand);
+  --mdc-outlined-text-field-focus-outline-color: var(--brand);
+  --mdc-outlined-text-field-label-text-color: var(--text-secondary);
+  --mdc-outlined-text-field-input-text-color: var(--text-primary);
+  --mdc-outlined-text-field-caret-color: var(--brand);
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.anim-in { animation: fadeInUp 0.4s ease-out both; }
+.anim-d1 { animation-delay: 0.05s; }
+.anim-d2 { animation-delay: 0.1s; }
+.anim-d3 { animation-delay: 0.15s; }
+.anim-d4 { animation-delay: 0.2s; }
+.anim-d5 { animation-delay: 0.25s; }
+.anim-d6 { animation-delay: 0.3s; }
+
+/* Utility */
+.mono { font-family: var(--font-mono); }
+.text-green { color: var(--green); }
+.text-red { color: var(--red); }
+.text-amber { color: var(--amber); }
+.text-blue { color: var(--blue); }
+.text-brand { color: var(--brand); }
+.text-muted { color: var(--text-muted); }
+.text-secondary { color: var(--text-secondary); }
+
+/* Buttons */
+.btn-export {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-white);
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.8rem; font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-export:hover {
+  background: var(--bg-subtle);
+  border-color: var(--brand);
+  color: var(--brand);
+}
+.btn-export mat-icon { font-size: 16px; width: 16px; height: 16px; }
+
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 18px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--brand);
+  color: white;
+  font-family: var(--font-sans);
+  font-size: 0.85rem; font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-primary:hover { background: var(--brand-dark); box-shadow: var(--shadow-md); }
+.btn-primary mat-icon { font-size: 18px; width: 18px; height: 18px; }
