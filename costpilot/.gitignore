@@ -1,0 +1,33 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+dist/
+
+# Angular
+node_modules/
+.angular/
+dist/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Environment
+.env
+!.env.example
+
+# Docker
+docker-compose.override.yml
+
+# OS
+Thumbs.db
+.DS_Store
