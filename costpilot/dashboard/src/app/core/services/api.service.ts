@@ -1,0 +1,63 @@
+import { Injectable } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { DashboardSummary, Proposal, PaginatedResponse, AgentStatus, AgentAlert, AgentInsight, CorrelatedFinding, CostImpact, SavingsTrend } from '../types/api.types';
+
+@Injectable({ providedIn: 'root' })
+export class ApiService {
+  constructor(private http: HttpClient) {}
+
+  getDashboardSummary() {
+    return this.http.get<DashboardSummary>('/api/dashboard/summary');
+  }
+
+  getSavingsTrend(months = 12) {
+    return this.http.get<SavingsTrend[]>('/api/dashboard/savings-trend', { params: { months } });
+  }
+
+  getProposals(page = 1, pageSize = 20, status?: string, agentType?: string) {
+    let params = new HttpParams().set('page', page).set('pageSize', pageSize);
+    if (status) params = params.set('status', status);
+    if (agentType) params = params.set('agentType', agentType);
+    return this.http.get<PaginatedResponse<Proposal>>('/api/proposals', { params });
+  }
+
+  getProposal(id: string) {
+    return this.http.get<Proposal>(`/api/proposals/${id}`);
+  }
+
+  approveProposal(id: string, comment?: string) {
+    return this.http.put<Proposal>(`/api/proposals/${id}/approve`, { comment });
+  }
+
+  rejectProposal(id: string, reason: string) {
+    return this.http.put<Proposal>(`/api/proposals/${id}/reject`, { reason });
+  }
+
+  getAgentStatus(type: string) {
+    return this.http.get<AgentStatus>(`/api/agents/${type}/status`);
+  }
+
+  triggerAgent(type: string) {
+    return this.http.post(`/api/agents/${type}/trigger`, {});
+  }
+
+  getAgentAlerts(type: string) {
+    return this.http.get<AgentAlert[]>(`/api/agents/${type}/alerts`);
+  }
+
+  getInsights() {
+    return this.http.get<AgentInsight[]>('/api/insights');
+  }
+
+  getCorrelatedFindings() {
+    return this.http.get<CorrelatedFinding[]>('/api/insights/correlated');
+  }
+
+  getImpacts() {
+    return this.http.get<CostImpact[]>('/api/impacts');
+  }
+
+  getImpactSummary() {
+    return this.http.get<{ totalRealized: number; byMonth: { year: number; month: number; total: number }[] }>('/api/impacts/summary');
+  }
+}
