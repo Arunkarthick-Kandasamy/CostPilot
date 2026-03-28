@@ -10,6 +10,13 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Swagger / OpenAPI
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new() { Title = "CostPilot API", Version = "v1", Description = "Enterprise Cost Intelligence API" });
+});
+
 // JWT Settings
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>()
     ?? new JwtSettings { Secret = "DevFallbackKeyThatIsAtLeast32BytesLong!!", Issuer = "CostPilot", Audience = "CostPilotClients" };
@@ -64,6 +71,9 @@ builder.Services.AddMassTransit(x =>
 // Correlation Engine
 builder.Services.AddScoped<CorrelationEngine>();
 
+// Background Services
+builder.Services.AddHostedService<ProposalExecutionService>();
+
 // SignalR
 builder.Services.AddSignalR();
 
@@ -76,6 +86,8 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+app.UseSwagger();
+app.UseSwaggerUI();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -89,6 +101,8 @@ app.MapDashboardEndpoints();
 app.MapAgentEndpoints();
 app.MapInsightEndpoints();
 app.MapImpactEndpoints();
+app.MapOperationalDataEndpoints();
+app.MapAuditEndpoints();
 
 if (app.Environment.IsDevelopment())
 {
