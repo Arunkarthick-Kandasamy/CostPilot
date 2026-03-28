@@ -1,0 +1,6 @@
+@CostPilot.Gateway.Api_HostAddress = http://localhost:5179
+
+GET {{CostPilot.Gateway.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
