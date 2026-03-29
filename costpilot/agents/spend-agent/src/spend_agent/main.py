@@ -4,12 +4,9 @@ import logging
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime
-from decimal import Decimal
-
 from fastapi import FastAPI
 from costpilot_common.config import ANTHROPIC_API_KEY
-from costpilot_common.messaging import publish_proposal, publish_insight, publish_alert
-from costpilot_common.schemas import ProposalSchema, InsightSchema, AlertSchema
+from costpilot_common.gateway_client import save_proposal, save_insight, save_alert
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -64,33 +61,32 @@ async def scheduled_scan():
 
 def publish_findings(findings: list[dict]):
     for f in findings:
-        impact = Decimal(str(f.get("financial_impact", 0)))
+        impact = float(f.get("financial_impact", 0))
         if impact > 0:
-            publish_proposal(ProposalSchema(
+            save_proposal(
                 agent_type="Spend",
                 title=f"Spend: {f.get('description', 'Cost saving opportunity')[:120]}",
-                description=f.get("description", json.dumps(f)),
+                description=f.get("description", str(f)),
                 estimated_savings=impact,
                 risk_level="High" if impact > 50000 else "Medium" if impact > 10000 else "Low",
                 evidence=f,
-            ))
-        publish_insight(InsightSchema(
+            )
+        save_insight(
             source_agent="Spend",
             insight_type=f.get("type", "cost_anomaly"),
             entity_type="vendor",
             entity_id=str(f.get("vendor_id", "unknown")),
             summary=f.get("description", str(f))[:500],
             financial_impact=impact,
-            confidence=Decimal(str(f.get("confidence", 0.7))),
+            confidence=f.get("confidence", 0.7),
             related_data=f,
-        ))
-
-    publish_alert(AlertSchema(
+        )
+    save_alert(
         agent_type="Spend",
         severity="Info",
         title="Spend analysis completed",
-        message=f"Found {len(findings)} findings across procurement data",
-    ))
+        message=f"Found {len(findings)} findings",
+    )
 
 
 @asynccontextmanager
