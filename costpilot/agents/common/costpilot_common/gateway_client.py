@@ -52,6 +52,22 @@ def save_proposal(agent_type: str, title: str, description: str,
     from sqlalchemy import text
     import uuid
 
+    # Build rich description with playbook, corrective action, and downstream workflow
+    playbook = evidence.get("playbook", []) if evidence else []
+    corrective = evidence.get("corrective_action", "") if evidence else ""
+    workflow = evidence.get("downstream_workflow", "") if evidence else ""
+    root_cause = evidence.get("root_cause", "") if evidence else ""
+
+    full_desc = description
+    if root_cause:
+        full_desc += "\n\n## Root Cause\n" + root_cause
+    if playbook:
+        full_desc += "\n\n## Playbook\n" + "\n".join(playbook)
+    if corrective:
+        full_desc += "\n\n## Corrective Action\n" + corrective
+    if workflow:
+        full_desc += "\n\n## Downstream Workflow\n" + workflow
+
     db = SessionLocal()
     try:
         pid = str(uuid.uuid4())
@@ -64,7 +80,7 @@ def save_proposal(agent_type: str, title: str, description: str,
             "id": pid,
             "agent": agent_type,
             "title": title[:500],
-            "desc": description,
+            "desc": full_desc,
             "savings": estimated_savings,
             "risk": risk_level,
             "evidence": json.dumps(evidence, cls=DecimalEncoder) if evidence else None,
