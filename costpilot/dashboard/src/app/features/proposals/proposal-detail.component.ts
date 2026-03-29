@@ -356,8 +356,9 @@ export class ProposalDetailComponent implements OnInit {
       this.proposal.set(p);
       this.parseEvidence(p);
       this.parseDescription(p.description);
-      this.buildDataSources(p.agentType);
-      this.buildMathBreakdown(p);
+      // Only build defaults if evidence didn't provide them
+      if (this.dataSources().length === 0) this.buildDataSources(p.agentType);
+      if (this.mathLines().length === 0) this.buildMathBreakdown(p);
       this.parseExecutionResult(p);
     });
   }
@@ -376,6 +377,16 @@ export class ProposalDetailComponent implements OnInit {
           this.workflowId.set(colonIdx > 0 ? wf.substring(0, colonIdx).trim() : 'WORKFLOW');
           this.workflowDesc.set(colonIdx > 0 ? wf.substring(colonIdx + 1).trim() : wf);
           this.downstreamWorkflow.set(wf);
+        }
+        // Use math and data_sources from evidence if available (realistic scenarios)
+        if (ev.math && ev.math.length > 0) {
+          this.mathLines.set(ev.math.map((m: any) => ({
+            label: m.label, value: m.value, prefix: m.prefix || '', suffix: m.suffix || '',
+            green: m.green || false, red: m.red || false, isTotal: m.total || false, highlight: m.highlight || false,
+          })));
+        }
+        if (ev.data_sources && ev.data_sources.length > 0) {
+          this.dataSources.set(ev.data_sources);
         }
       }
     } catch {}
