@@ -9,12 +9,10 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'DM Sans', sans-serif; background: #0f0f1a; color: #e2e8f0; overflow: hidden; height: 100vh; }
-
-  .slide { display: none; height: 100vh; padding: 40px 60px; flex-direction: column; }
+  .slide { display: none; height: 100vh; padding: 36px 56px 70px; flex-direction: column; }
   .slide.active { display: flex; animation: fadeIn 0.4s ease; }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
-  /* Title slide */
   .title-slide { justify-content: center; align-items: center; text-align: center; background: linear-gradient(135deg, #0f0f1a 0%, #1a1a3e 100%); }
   .title-slide h1 { font-size: 3.5rem; font-weight: 800; letter-spacing: -0.03em; background: linear-gradient(135deg, #fff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
   .title-slide .subtitle { font-size: 1.3rem; color: #6366f1; margin-top: 12px; font-weight: 500; }
@@ -22,39 +20,49 @@
   .title-slide .tech-stack { display: flex; gap: 12px; margin-top: 32px; justify-content: center; flex-wrap: wrap; }
   .title-slide .tech-tag { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; padding: 6px 14px; background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.2); border-radius: 20px; color: #a5b4fc; }
 
-  /* Content slides */
-  .content-slide { gap: 24px; }
+  .content-slide { gap: 16px; }
   .slide-header { display: flex; justify-content: space-between; align-items: center; }
-  .slide-num { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; color: #6366f1; letter-spacing: 0.15em; text-transform: uppercase; }
-  .slide-title { font-size: 1.8rem; font-weight: 700; letter-spacing: -0.02em; }
-  .slide-body { display: flex; gap: 32px; flex: 1; min-height: 0; }
-  .slide-img { flex: 1.3; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
+  .slide-num { font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; color: #6366f1; letter-spacing: 0.15em; text-transform: uppercase; }
+  .slide-title { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.02em; }
+  .slide-body { display: flex; gap: 28px; flex: 1; min-height: 0; }
+  .slide-img { flex: 1.4; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
   .slide-img img { width: 100%; height: 100%; object-fit: cover; object-position: top left; }
-  .slide-info { flex: 0.7; display: flex; flex-direction: column; gap: 16px; }
+  .slide-info { flex: 0.6; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
 
-  .info-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 18px 20px; }
-  .info-card h3 { font-size: 0.72rem; font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; letter-spacing: 0.1em; color: #6366f1; margin-bottom: 8px; }
-  .info-card p { font-size: 0.88rem; line-height: 1.6; color: #94a3b8; }
+  .info-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 14px 16px; }
+  .info-card h3 { font-size: 0.65rem; font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; letter-spacing: 0.1em; color: #6366f1; margin-bottom: 6px; }
+  .info-card p { font-size: 0.82rem; line-height: 1.55; color: #94a3b8; }
   .info-card ul { list-style: none; padding: 0; }
-  .info-card li { font-size: 0.85rem; color: #94a3b8; padding: 4px 0; padding-left: 16px; position: relative; }
-  .info-card li::before { content: ''; position: absolute; left: 0; top: 11px; width: 6px; height: 6px; border-radius: 50%; background: #6366f1; }
-  .highlight { color: #10b981 !important; font-weight: 600; }
-  .highlight-red { color: #ef4444 !important; font-weight: 600; }
-  .highlight-blue { color: #6366f1 !important; font-weight: 600; }
-
-  /* Evaluation criteria card */
+  .info-card li { font-size: 0.8rem; color: #94a3b8; padding: 3px 0 3px 14px; position: relative; }
+  .info-card li::before { content: ''; position: absolute; left: 0; top: 10px; width: 5px; height: 5px; border-radius: 50%; background: #6366f1; }
+  .hl { color: #10b981 !important; font-weight: 600; }
+  .hl-r { color: #ef4444 !important; font-weight: 600; }
+  .hl-b { color: #6366f1 !important; font-weight: 600; }
+  .hl-a { color: #f59e0b !important; font-weight: 600; }
   .eval-card { background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.15); }
   .eval-card h3 { color: #a5b4fc; }
 
-  /* Navigation */
-  .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 56px; background: rgba(15,15,26,0.95); backdrop-filter: blur(12px); border-top: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: space-between; padding: 0 60px; z-index: 100; }
-  .nav-btn { background: none; border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; padding: 8px 20px; border-radius: 8px; cursor: pointer; font-family: 'DM Sans'; font-size: 0.85rem; transition: all 0.2s; }
+  /* Agent color badges */
+  .agent-badge { display: inline-block; font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; font-weight: 600; padding: 3px 10px; border-radius: 12px; letter-spacing: 0.06em; margin-bottom: 4px; }
+  .badge-spend { background: rgba(16,185,129,0.12); color: #10b981; }
+  .badge-sla { background: rgba(239,68,68,0.12); color: #ef4444; }
+  .badge-resource { background: rgba(59,130,246,0.12); color: #3b82f6; }
+  .badge-finops { background: rgba(245,158,11,0.12); color: #f59e0b; }
+
+  .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 52px; background: rgba(15,15,26,0.95); backdrop-filter: blur(12px); border-top: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: space-between; padding: 0 56px; z-index: 100; }
+  .nav-btn { background: none; border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; padding: 7px 18px; border-radius: 8px; cursor: pointer; font-family: 'DM Sans'; font-size: 0.82rem; transition: all 0.2s; }
   .nav-btn:hover { background: rgba(99,102,241,0.1); border-color: #6366f1; color: #a5b4fc; }
   .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-  .progress { display: flex; gap: 6px; align-items: center; }
-  .progress-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.1); cursor: pointer; transition: all 0.2s; }
-  .progress-dot.active { background: #6366f1; width: 24px; border-radius: 4px; }
-  .slide-counter { font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; color: #64748b; }
+  .progress { display: flex; gap: 4px; align-items: center; }
+  .progress-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.1); cursor: pointer; transition: all 0.2s; }
+  .progress-dot.active { background: #6366f1; width: 20px; border-radius: 4px; }
+  .slide-counter { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: #64748b; }
+
+  /* Two-image layout */
+  .dual-img { display: flex; gap: 16px; flex: 1.4; }
+  .dual-img .img-panel { flex: 1; border-radius: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+  .dual-img .img-panel img { width: 100%; height: 100%; object-fit: cover; object-position: top left; }
+  .img-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.1em; color: #64748b; margin-bottom: 4px; text-align: center; }
 </style>
 </head>
 <body>
@@ -65,354 +73,205 @@
   <div class="subtitle">AI for Enterprise Cost Intelligence & Autonomous Action</div>
   <div class="tagline">Hackathon Demo Walkthrough</div>
   <div class="tech-stack">
-    <span class="tech-tag">.NET 8</span>
-    <span class="tech-tag">Python / CrewAI</span>
-    <span class="tech-tag">Angular 17</span>
+    <span class="tech-tag">.NET 8 Gateway</span>
+    <span class="tech-tag">4 Python AI Agents</span>
+    <span class="tech-tag">Angular 17 Dashboard</span>
     <span class="tech-tag">PostgreSQL</span>
     <span class="tech-tag">RabbitMQ</span>
-    <span class="tech-tag">ECharts</span>
+    <span class="tech-tag">46,000+ Records</span>
   </div>
 </div>
 
 <!-- SLIDE 1: Login -->
 <div class="slide content-slide" data-slide="1">
-  <div class="slide-header">
-    <div><div class="slide-num">Step 01 / 11</div><div class="slide-title">Secure Authentication</div></div>
-  </div>
+  <div class="slide-header"><div><div class="slide-num">Step 01</div><div class="slide-title">Secure Enterprise Authentication</div></div></div>
   <div class="slide-body">
     <div class="slide-img"><img src="demo-01-login.png"></div>
     <div class="slide-info">
-      <div class="info-card">
-        <h3>What You See</h3>
-        <p>Split-panel login with branding, feature highlights, and demo credentials. Role-based access: <span class="highlight-blue">Admin</span>, <span class="highlight-blue">Approver</span>, <span class="highlight-blue">Viewer</span>.</p>
-      </div>
-      <div class="info-card">
-        <h3>How It Works</h3>
-        <ul>
-          <li>JWT authentication via .NET 8 Gateway</li>
-          <li>BCrypt password hashing</li>
-          <li>Role-based authorization on all endpoints</li>
-          <li>Token passed to SignalR for real-time updates</li>
-        </ul>
-      </div>
-      <div class="info-card eval-card">
-        <h3>Evaluation Criteria</h3>
-        <p><span class="highlight-blue">Enterprise approval workflows</span> — Role-based access ensures only authorized users can approve cost actions.</p>
-      </div>
+      <div class="info-card"><h3>Roles</h3><ul><li><span class="hl-b">Admin</span> — Full access, approve & trigger agents</li><li><span class="hl-b">Approver</span> — Approve/reject proposals</li><li><span class="hl-b">Viewer</span> — Read-only dashboard</li></ul></div>
+      <div class="info-card"><h3>Security</h3><ul><li>JWT authentication via .NET 8</li><li>BCrypt password hashing</li><li>Role-based API authorization</li><li>SignalR WebSocket with token auth</li></ul></div>
+      <div class="info-card eval-card"><h3>PS: Enterprise Workflows</h3><p>Role-based access ensures only authorized users approve cost actions.</p></div>
     </div>
   </div>
 </div>
 
 <!-- SLIDE 2: Dashboard -->
 <div class="slide content-slide" data-slide="2">
-  <div class="slide-header">
-    <div><div class="slide-num">Step 02 / 11</div><div class="slide-title">Executive Dashboard — Command Center</div></div>
-  </div>
+  <div class="slide-header"><div><div class="slide-num">Step 02</div><div class="slide-title">Executive Dashboard — Real-Time Command Center</div></div></div>
   <div class="slide-body">
     <div class="slide-img"><img src="demo-02-dashboard.png"></div>
     <div class="slide-info">
-      <div class="info-card">
-        <h3>Key Metrics</h3>
-        <ul>
-          <li><span class="highlight">$1.37M</span> in savings identified across 4 agents</li>
-          <li><span class="highlight-red">5 proposals</span> pending human approval</li>
-          <li><span class="highlight">3 actions</span> already executed with measured impact</li>
-          <li>Filters by agent type, time period, and status</li>
-        </ul>
-      </div>
-      <div class="info-card">
-        <h3>Charts & Analytics</h3>
-        <ul>
-          <li>Savings trend (bar/line/area toggleable)</li>
-          <li>Agent performance breakdown (pie/bar)</li>
-          <li>Risk distribution across proposals</li>
-          <li>Pipeline status (pending/approved/executed)</li>
-        </ul>
-      </div>
-      <div class="info-card eval-card">
-        <h3>Evaluation Criteria</h3>
-        <p><span class="highlight">Quantifiable cost impact</span> — Every dollar is tracked: identified, approved, executed, and measured.</p>
-      </div>
+      <div class="info-card"><h3>KPIs</h3><ul><li><span class="hl">$1.37M</span> savings identified</li><li>5 proposals awaiting approval</li><li>3 actions executed with measured impact</li><li>Filterable by agent, time, status</li></ul></div>
+      <div class="info-card"><h3>Interactive Charts</h3><ul><li>Savings trend (bar/line/area toggle)</li><li>Agent performance (pie/bar toggle)</li><li>Risk distribution</li><li>Pipeline status breakdown</li></ul></div>
+      <div class="info-card eval-card"><h3>PS: Quantifiable Impact</h3><p>Every dollar tracked: identified → approved → executed → measured.</p></div>
     </div>
   </div>
 </div>
 
 <!-- SLIDE 3: Proposals -->
 <div class="slide content-slide" data-slide="3">
-  <div class="slide-header">
-    <div><div class="slide-num">Step 03 / 11</div><div class="slide-title">Action Proposals — AI-Detected Cost Issues</div></div>
-  </div>
+  <div class="slide-header"><div><div class="slide-num">Step 03</div><div class="slide-title">Action Proposals — AI-Detected Cost Issues</div></div></div>
   <div class="slide-body">
     <div class="slide-img"><img src="demo-03-proposals.png"></div>
     <div class="slide-info">
-      <div class="info-card">
-        <h3>Real Enterprise Scenarios</h3>
-        <ul>
-          <li>AWS costs increased 42% without infrastructure growth</li>
-          <li>$187K duplicate payment to Accenture</li>
-          <li>Salesforce renewal 28% above market rate</li>
-          <li>Payment Gateway SLA breach = $150K penalty</li>
-          <li>141 unused Jira licenses = $84K/yr waste</li>
-        </ul>
-      </div>
-      <div class="info-card">
-        <h3>Filterable Pipeline</h3>
-        <p>Filter by status (Pending, Approved, Executed, Rejected) and agent type. Color-coded risk tags. Export to formatted Excel.</p>
-      </div>
-      <div class="info-card eval-card">
-        <h3>Evaluation Criteria</h3>
-        <p><span class="highlight-blue">Beyond dashboards</span> — Each proposal is actionable, not just a report. Every finding has a playbook and corrective action.</p>
-      </div>
+      <div class="info-card"><h3>10 Real Scenarios</h3><ul>
+        <li><span class="hl">Spend:</span> AWS 42% cost spike, Accenture $187K duplicate, Salesforce 28% overpriced</li>
+        <li><span class="hl-r">SLA:</span> Payment Gateway breach → $150K penalty, Order Processing latency</li>
+        <li><span class="hl-b">Resource:</span> 141 unused Jira licenses, 12 idle EC2 instances</li>
+        <li><span class="hl-a">FinOps:</span> Engineering 23% over budget, 2,406 unreconciled invoices, Marketing unapproved sponsorships</li>
+      </ul></div>
+      <div class="info-card"><h3>Features</h3><ul><li>Filter by status & agent</li><li>Color-coded risk tags</li><li>Export to formatted Excel</li></ul></div>
     </div>
   </div>
 </div>
 
-<!-- SLIDE 4: Intelligence Report -->
+<!-- SLIDE 4: Spend Agent -->
 <div class="slide content-slide" data-slide="4">
-  <div class="slide-header">
-    <div><div class="slide-num">Step 04 / 11</div><div class="slide-title">Intelligence Report — The Full Story</div></div>
-  </div>
+  <div class="slide-header"><div><div class="slide-num">Agent 01</div><div class="slide-title"><span class="agent-badge badge-spend">SPEND</span> Spend Intelligence Agent</div></div></div>
   <div class="slide-body">
-    <div class="slide-img"><img src="demo-04-intelligence-report.png"></div>
+    <div class="dual-img">
+      <div><div class="img-label">Configuration & Run</div><div class="img-panel"><img src="agent-spend.png"></div></div>
+      <div><div class="img-label">Intelligence Report</div><div class="img-panel"><img src="report-spend.png"></div></div>
+    </div>
     <div class="slide-info">
-      <div class="info-card">
-        <h3>Show the Math</h3>
-        <p>Line-by-line cost calculation: unreconciled count, matchable %, manual review hours, close cycle reduction. Every number is traceable.</p>
-      </div>
-      <div class="info-card">
-        <h3>Data Integration Depth</h3>
-        <p>Shows exactly which data sources were scanned: SAP AP (8,000 records), PO System (10,000), Goods Receipt (9,200), Vendor Master (50).</p>
-      </div>
-      <div class="info-card">
-        <h3>Actionable Content</h3>
-        <ul>
-          <li><span class="highlight-blue">Playbook</span> — 6 numbered action steps</li>
-          <li><span class="highlight-red">Root Cause</span> — Why this problem exists</li>
-          <li><span class="highlight">Corrective Action</span> — What the system will do</li>
-          <li><span class="highlight-blue">Downstream Workflow</span> — FIN-CLOSE-001 ticket</li>
-        </ul>
-      </div>
+      <div class="info-card"><h3>What It Detects</h3><ul><li>Price anomalies (vendor overcharging)</li><li>Duplicate invoices & payments</li><li>Rates above market benchmarks</li></ul></div>
+      <div class="info-card"><h3>Configurable Thresholds</h3><ul><li>Price anomaly: 5-100% above avg</li><li>Duplicate window: 7-90 days</li><li>Market rate threshold: 5-50%</li></ul></div>
+      <div class="info-card"><h3>Data Scanned</h3><ul><li>10,000 purchase orders</li><li>8,000 vendor invoices</li><li>97 vendor contracts</li><li>10 market benchmarks</li></ul></div>
+      <div class="info-card eval-card"><h3>PS: Spend Intelligence</h3><p>"Dig into procurement, vendor, and operations data to find anomalies, duplicate costs, and rate optimization opportunities — then generate actionable playbooks."</p></div>
     </div>
   </div>
 </div>
 
-<!-- SLIDE 5: Approval -->
+<!-- SLIDE 5: SLA Agent -->
 <div class="slide content-slide" data-slide="5">
-  <div class="slide-header">
-    <div><div class="slide-num">Step 05 / 11</div><div class="slide-title">Enterprise Approval — Human in the Loop</div></div>
-  </div>
+  <div class="slide-header"><div><div class="slide-num">Agent 02</div><div class="slide-title"><span class="agent-badge badge-sla">SLA</span> SLA & Penalty Prevention Agent</div></div></div>
   <div class="slide-body">
-    <div class="slide-img"><img src="demo-05-approved-executing.png"></div>
+    <div class="dual-img">
+      <div><div class="img-label">Configuration & Run</div><div class="img-panel"><img src="agent-sla.png"></div></div>
+      <div><div class="img-label">Intelligence Report</div><div class="img-panel"><img src="report-sla.png"></div></div>
+    </div>
     <div class="slide-info">
-      <div class="info-card">
-        <h3>Approval Flow</h3>
-        <ul>
-          <li>Admin clicks <span class="highlight">"Approve & Execute"</span></li>
-          <li>Status changes to Approved</li>
-          <li>Progress bar shows execution in progress</li>
-          <li>Audit log entry created with user ID and timestamp</li>
-        </ul>
-      </div>
-      <div class="info-card">
-        <h3>Autonomous Execution</h3>
-        <p>The CostPilot Automation Engine picks up approved proposals within 30 seconds, validates preconditions, initiates corrective actions, creates downstream tickets, and records financial impact.</p>
-      </div>
-      <div class="info-card eval-card">
-        <h3>Evaluation Criteria</h3>
-        <p><span class="highlight-blue">Enterprise approval workflows</span> — Human approves, AI executes. Full audit trail. Role-based authorization.</p>
-      </div>
+      <div class="info-card"><h3>What It Detects</h3><ul><li>Services approaching SLA breach</li><li>Uptime degradation trends</li><li>Response time violations</li><li>Penalty exposure ($10K-$150K)</li></ul></div>
+      <div class="info-card"><h3>Configurable Thresholds</h3><ul><li>Lookback period: 1-30 days</li><li>Uptime breach margin: 0.1-5%</li><li>Response time margin: 5-30%</li></ul></div>
+      <div class="info-card"><h3>Autonomous Actions</h3><ul><li>Scale service pods automatically</li><li>Activate circuit breaker</li><li>Reroute traffic to backup region</li><li>Page on-call SRE via PagerDuty</li></ul></div>
+      <div class="info-card eval-card"><h3>PS: SLA Prevention</h3><p>"Detect approaching breaches from operational signals and reroute work, shift resources, or escalate before the financial hit lands."</p></div>
     </div>
   </div>
 </div>
 
-<!-- SLIDE 6: Execution Result -->
+<!-- SLIDE 6: Resource Agent -->
 <div class="slide content-slide" data-slide="6">
-  <div class="slide-header">
-    <div><div class="slide-num">Step 06 / 11</div><div class="slide-title">Execution Result — Actions Taken</div></div>
-  </div>
+  <div class="slide-header"><div><div class="slide-num">Agent 03</div><div class="slide-title"><span class="agent-badge badge-resource">RESOURCE</span> Resource Optimization Agent</div></div></div>
   <div class="slide-body">
-    <div class="slide-img"><img src="demo-06-executed-result.png"></div>
+    <div class="dual-img">
+      <div><div class="img-label">Configuration & Run</div><div class="img-panel"><img src="agent-resource.png"></div></div>
+      <div><div class="img-label">Intelligence Report</div><div class="img-panel"><img src="report-resource.png"></div></div>
+    </div>
     <div class="slide-info">
-      <div class="info-card">
-        <h3>What The System Did</h3>
-        <ul>
-          <li>Validated proposal preconditions</li>
-          <li>Initiated corrective action workflow</li>
-          <li>Created downstream tickets (PROC-REVIEW, ALERT-SET)</li>
-          <li>Updated financial records</li>
-          <li>Sent stakeholder notifications</li>
-        </ul>
-      </div>
-      <div class="info-card">
-        <h3>Financial Impact Measured</h3>
-        <p>Estimated: <span class="highlight">$423,360</span><br>Actual: <span class="highlight">$397,958</span><br>Variance: <span class="highlight-red">-6.0%</span><br>Playbook steps marked as completed.</p>
-      </div>
-      <div class="info-card eval-card">
-        <h3>Evaluation Criteria</h3>
-        <p><span class="highlight">Ability to take action</span> — Not just reports. The system executed the corrective action, created tickets, and measured the result.</p>
-      </div>
+      <div class="info-card"><h3>What It Detects</h3><ul><li>Unused software licenses (<60% utilization)</li><li>Idle servers (CPU <10% for 7+ days)</li><li>Over-provisioned infrastructure</li></ul></div>
+      <div class="info-card"><h3>Configurable Thresholds</h3><ul><li>License utilization: 20-90%</li><li>Server CPU idle threshold: 2-30%</li><li>Metrics lookback: 1-30 days</li></ul></div>
+      <div class="info-card"><h3>Autonomous Actions</h3><ul><li>Deactivate unused user accounts</li><li>Downgrade subscription seat count</li><li>Stop idle servers (7-day observation)</li><li>Configure Okta SCIM auto-provisioning</li></ul></div>
+      <div class="info-card eval-card"><h3>PS: Resource Optimization</h3><p>"Monitor utilization across tools, infrastructure, and teams — recommending consolidation and executing approved changes."</p></div>
     </div>
   </div>
 </div>
 
-<!-- SLIDE 7: Impact -->
+<!-- SLIDE 7: FinOps Agent -->
 <div class="slide content-slide" data-slide="7">
-  <div class="slide-header">
-    <div><div class="slide-num">Step 07 / 11</div><div class="slide-title">Impact Tracking — Prove the ROI</div></div>
+  <div class="slide-header"><div><div class="slide-num">Agent 04</div><div class="slide-title"><span class="agent-badge badge-finops">FINOPS</span> Financial Operations Agent</div></div></div>
+  <div class="slide-body">
+    <div class="dual-img">
+      <div><div class="img-label">Configuration & Run</div><div class="img-panel"><img src="agent-finops.png"></div></div>
+      <div><div class="img-label">Intelligence Report</div><div class="img-panel"><img src="report-finops.png"></div></div>
+    </div>
+    <div class="slide-info">
+      <div class="info-card"><h3>What It Detects</h3><ul><li>Budget variances >15% with root cause</li><li>Unreconciled invoices by vendor</li><li>Spending without budget approval</li></ul></div>
+      <div class="info-card"><h3>Root Cause Attribution</h3><p>Traces variance to source: "VP approved $130K Snowflake migration via Slack without Finance sign-off"</p></div>
+      <div class="info-card"><h3>Autonomous Actions</h3><ul><li>Auto-reconcile 3-way matched invoices</li><li>Create budget amendments</li><li>Flag policy violations</li><li>Reduce close cycle by 3 days</li></ul></div>
+      <div class="info-card eval-card"><h3>PS: Financial Operations</h3><p>"Reconcile transactions, flag discrepancies, and produce variance analyses with root-cause attribution to cut close cycles."</p></div>
+    </div>
   </div>
+</div>
+
+<!-- SLIDE 8: Approval Flow -->
+<div class="slide content-slide" data-slide="8">
+  <div class="slide-header"><div><div class="slide-num">Step 04</div><div class="slide-title">Enterprise Approval Workflow</div></div></div>
+  <div class="slide-body">
+    <div class="dual-img">
+      <div><div class="img-label">Approve & Execute</div><div class="img-panel"><img src="demo-05-approved-executing.png"></div></div>
+      <div><div class="img-label">Execution Result</div><div class="img-panel"><img src="demo-06-executed-result.png"></div></div>
+    </div>
+    <div class="slide-info">
+      <div class="info-card"><h3>The Flow</h3><ul><li>AI agent <span class="hl-b">detects</span> issue</li><li>Creates proposal with <span class="hl-b">playbook</span></li><li>Human <span class="hl">approves</span></li><li>Automation <span class="hl">executes</span> corrective action</li><li>System <span class="hl">measures</span> actual savings</li></ul></div>
+      <div class="info-card"><h3>Execution Details</h3><ul><li>Corrective actions performed</li><li>Downstream tickets created</li><li>Stakeholders notified</li><li>Estimated vs actual savings</li><li>Variance % calculated</li></ul></div>
+      <div class="info-card eval-card"><h3>PS: Take Action</h3><p>"Ability to take action — not just generate reports." Human approves, AI executes, system proves ROI.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 9: Impact -->
+<div class="slide content-slide" data-slide="9">
+  <div class="slide-header"><div><div class="slide-num">Step 05</div><div class="slide-title">Impact Tracking — Prove the ROI</div></div></div>
   <div class="slide-body">
     <div class="slide-img"><img src="demo-07-impact.png"></div>
     <div class="slide-info">
-      <div class="info-card">
-        <h3>Quantifiable Impact</h3>
-        <p>Total savings realized across all executed actions. Monthly trend chart. Estimated vs Actual comparison for each executed proposal.</p>
-      </div>
-      <div class="info-card">
-        <h3>The Complete Loop</h3>
-        <ul>
-          <li>Agent <span class="highlight-blue">detects</span> cost issue</li>
-          <li>System <span class="highlight-blue">calculates</span> potential savings</li>
-          <li>Human <span class="highlight-blue">approves</span> corrective action</li>
-          <li>Automation <span class="highlight-blue">executes</span> the action</li>
-          <li>System <span class="highlight">measures</span> actual financial impact</li>
-        </ul>
-      </div>
-      <div class="info-card eval-card">
-        <h3>Evaluation Criteria</h3>
-        <p><span class="highlight">Quantifiable cost impact (show the math)</span> — Every action has estimated vs actual savings with variance percentage.</p>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- SLIDE 8: Agent Config -->
-<div class="slide content-slide" data-slide="8">
-  <div class="slide-header">
-    <div><div class="slide-num">Step 08 / 11</div><div class="slide-title">AI Agent — Interactive Configuration</div></div>
-  </div>
-  <div class="slide-body">
-    <div class="slide-img"><img src="demo-08-agent-config.png"></div>
-    <div class="slide-info">
-      <div class="info-card">
-        <h3>4 Specialized Agents</h3>
-        <ul>
-          <li><span class="highlight">Spend Intelligence</span> — anomalies, duplicates, rates</li>
-          <li><span class="highlight-red">SLA Prevention</span> — breach prediction, escalation</li>
-          <li><span class="highlight-blue">Resource Optimization</span> — licenses, servers</li>
-          <li><span style="color:#f59e0b;font-weight:600">FinOps</span> — variances, reconciliation</li>
-        </ul>
-      </div>
-      <div class="info-card">
-        <h3>User Configurable</h3>
-        <p>Adjustable thresholds: price anomaly %, duplicate detection window, market rate threshold, max results. Users control what the agent looks for.</p>
-      </div>
-      <div class="info-card">
-        <h3>Continuous Monitoring</h3>
-        <p>Agents run on configurable schedules (default: 5 minutes). Each run queries 46,000+ operational records in PostgreSQL.</p>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- SLIDE 9: Agent Results -->
-<div class="slide content-slide" data-slide="9">
-  <div class="slide-header">
-    <div><div class="slide-num">Step 09 / 11</div><div class="slide-title">Live Analysis Results</div></div>
-  </div>
-  <div class="slide-body">
-    <div class="slide-img"><img src="demo-09-agent-results.png"></div>
-    <div class="slide-info">
-      <div class="info-card">
-        <h3>Dynamic Results</h3>
-        <p>Every run produces different findings based on configurable thresholds. Results include vendor names, dollar amounts, confidence scores, and detailed breakdowns.</p>
-      </div>
-      <div class="info-card">
-        <h3>Two Actions</h3>
-        <ul>
-          <li><span class="highlight-blue">Run Analysis</span> — See results immediately on screen</li>
-          <li><span class="highlight">Run & Save</span> — Save findings as proposals for approval workflow</li>
-        </ul>
-      </div>
-      <div class="info-card eval-card">
-        <h3>Evaluation Criteria</h3>
-        <p><span class="highlight-blue">Data integration depth</span> — Agent queries 46,000+ records across purchase orders, invoices, contracts, SLA metrics, server metrics, and budgets.</p>
-      </div>
+      <div class="info-card"><h3>Financial Proof</h3><ul><li>Total savings realized across all actions</li><li>Monthly trend chart</li><li>Estimated vs Actual per proposal</li><li>Variance analysis with %</li></ul></div>
+      <div class="info-card"><h3>Complete Loop</h3><p>Detection → Math → Playbook → Approval → Execution → Measurement. Every step is auditable.</p></div>
+      <div class="info-card eval-card"><h3>PS: Show the Math</h3><p>"Quantifiable cost impact (show the math)" — Every action has line-by-line cost calculation and measured outcome.</p></div>
     </div>
   </div>
 </div>
 
 <!-- SLIDE 10: Data Explorer -->
 <div class="slide content-slide" data-slide="10">
-  <div class="slide-header">
-    <div><div class="slide-num">Step 10 / 11</div><div class="slide-title">Data Explorer — Integration Depth</div></div>
-  </div>
+  <div class="slide-header"><div><div class="slide-num">Step 06</div><div class="slide-title">Data Explorer — Integration Depth</div></div></div>
   <div class="slide-body">
     <div class="slide-img"><img src="demo-10-data-explorer.png"></div>
     <div class="slide-info">
-      <div class="info-card">
-        <h3>7 Data Domains</h3>
-        <ul>
-          <li>Vendors (50) with contracts</li>
-          <li>Purchase Orders (10,000)</li>
-          <li>Invoices (8,000) with reconciliation status</li>
-          <li>SLA Services (20) with 21,600 metric readings</li>
-          <li>Software Licenses (30) with utilization charts</li>
-          <li>Infrastructure (50 servers) with CPU/memory</li>
-          <li>Budget vs Actual (768 entries) by department</li>
-        </ul>
-      </div>
-      <div class="info-card">
-        <h3>46,000+ Records</h3>
-        <p>All data browsable with charts. License utilization stacked bars, server CPU horizontal bars, budget vs actual grouped bars.</p>
-      </div>
+      <div class="info-card"><h3>46,000+ Records</h3><ul>
+        <li>Vendors (50)</li><li>Purchase Orders (10,000)</li><li>Invoices (8,000)</li>
+        <li>SLA Metrics (21,600)</li><li>Software Licenses (30)</li>
+        <li>Servers + Metrics (50 + 5,600)</li><li>Budget vs Actual (768)</li>
+      </ul></div>
+      <div class="info-card"><h3>Visualizations</h3><ul><li>License utilization stacked bars</li><li>Server CPU/memory horizontal bars</li><li>Budget vs actual grouped bars</li></ul></div>
+      <div class="info-card eval-card"><h3>PS: Data Integration</h3><p>"Data integration depth" — 7 data domains, 12 tables, 46K+ records. Each proposal shows which sources were scanned.</p></div>
     </div>
   </div>
 </div>
 
 <!-- SLIDE 11: API -->
 <div class="slide content-slide" data-slide="11">
-  <div class="slide-header">
-    <div><div class="slide-num">Step 11 / 11</div><div class="slide-title">REST API — OpenAPI Documentation</div></div>
-  </div>
+  <div class="slide-header"><div><div class="slide-num">Step 07</div><div class="slide-title">REST API & Architecture</div></div></div>
   <div class="slide-body">
     <div class="slide-img"><img src="demo-11-swagger.png"></div>
     <div class="slide-info">
-      <div class="info-card">
-        <h3>8 API Groups</h3>
-        <ul>
-          <li>/api/auth — JWT authentication</li>
-          <li>/api/dashboard — Analytics & KPIs</li>
-          <li>/api/proposals — CRUD + approve/reject</li>
-          <li>/api/agents — Status, trigger, alerts</li>
-          <li>/api/insights — Cross-agent intelligence</li>
-          <li>/api/impacts — Financial tracking</li>
-          <li>/api/data — 8 operational data endpoints</li>
-          <li>/api/audit — Compliance trail</li>
-        </ul>
-      </div>
-      <div class="info-card">
-        <h3>Architecture</h3>
-        <ul>
-          <li>.NET 8 API Gateway (MassTransit, EF Core, SignalR)</li>
-          <li>4 Python/CrewAI Agent Microservices</li>
-          <li>Angular 17+ Dashboard (ECharts, Material)</li>
-          <li>PostgreSQL + RabbitMQ</li>
-          <li>Docker Compose for deployment</li>
-        </ul>
-      </div>
-      <div class="info-card eval-card">
-        <h3>Summary</h3>
-        <p>CostPilot: <span class="highlight">$1.37M</span> in savings identified, <span class="highlight-blue">4 AI agents</span> continuously monitoring <span class="highlight-blue">46,000+</span> records, with enterprise approval workflows and <span class="highlight">quantifiable financial impact</span>.</p>
-      </div>
+      <div class="info-card"><h3>8 API Groups, 25+ Endpoints</h3><ul><li>/api/auth — JWT login</li><li>/api/dashboard — KPIs & trends</li><li>/api/proposals — CRUD + approve</li><li>/api/agents — status + trigger</li><li>/api/insights — cross-agent intel</li><li>/api/impacts — financial tracking</li><li>/api/data — operational data</li><li>/api/audit — compliance trail</li></ul></div>
+      <div class="info-card"><h3>Microservices</h3><ul><li>.NET 8 API Gateway</li><li>4 Python FastAPI Agent Services</li><li>Angular 17+ SPA</li><li>PostgreSQL + RabbitMQ</li><li>Docker Compose ready</li></ul></div>
     </div>
   </div>
 </div>
 
-<!-- Navigation Bar -->
+<!-- SLIDE 12: Summary -->
+<div class="slide title-slide" data-slide="12">
+  <h1 style="font-size:2.5rem">CostPilot Summary</h1>
+  <div class="subtitle" style="font-size:1.1rem; max-width:700px; line-height:1.6">
+    4 AI agents continuously monitoring 46,000+ enterprise records.<br>
+    $1.37M in savings identified. Autonomous execution with human approval.<br>
+    Every action has a playbook, root cause, and quantifiable financial impact.
+  </div>
+  <div class="tech-stack" style="margin-top:40px">
+    <span class="tech-tag" style="background:rgba(16,185,129,0.15);color:#10b981;border-color:rgba(16,185,129,0.3)">Spend Intelligence</span>
+    <span class="tech-tag" style="background:rgba(239,68,68,0.15);color:#ef4444;border-color:rgba(239,68,68,0.3)">SLA Prevention</span>
+    <span class="tech-tag" style="background:rgba(59,130,246,0.15);color:#3b82f6;border-color:rgba(59,130,246,0.3)">Resource Optimization</span>
+    <span class="tech-tag" style="background:rgba(245,158,11,0.15);color:#f59e0b;border-color:rgba(245,158,11,0.3)">Financial Operations</span>
+  </div>
+  <div class="tagline" style="margin-top:40px">Built for the Enterprise Cost Intelligence Hackathon</div>
+</div>
+
 <div class="nav-bar">
   <button class="nav-btn" id="prevBtn" onclick="navigate(-1)">&#8592; Previous</button>
   <div class="progress" id="progressBar"></div>
-  <div class="slide-counter" id="slideCounter">1 / 12</div>
+  <div class="slide-counter" id="slideCounter">1 / 13</div>
   <button class="nav-btn" id="nextBtn" onclick="navigate(1)">Next &#8594;</button>
 </div>
 
@@ -420,37 +279,23 @@
 let current = 0;
 const slides = document.querySelectorAll('.slide');
 const total = slides.length;
-
 function showSlide(n) {
   slides.forEach(s => s.classList.remove('active'));
   slides[n].classList.add('active');
-  document.getElementById('slideCounter').textContent = `${n + 1} / ${total}`;
+  document.getElementById('slideCounter').textContent = (n+1) + ' / ' + total;
   document.getElementById('prevBtn').disabled = n === 0;
   document.getElementById('nextBtn').disabled = n === total - 1;
-  updateProgress();
-}
-
-function navigate(dir) {
-  current = Math.max(0, Math.min(total - 1, current + dir));
-  showSlide(current);
-}
-
-function updateProgress() {
   const bar = document.getElementById('progressBar');
   bar.innerHTML = '';
   for (let i = 0; i < total; i++) {
-    const dot = document.createElement('div');
-    dot.className = 'progress-dot' + (i === current ? ' active' : '');
-    dot.onclick = () => { current = i; showSlide(i); };
-    bar.appendChild(dot);
+    const d = document.createElement('div');
+    d.className = 'progress-dot' + (i === n ? ' active' : '');
+    d.onclick = () => { current = i; showSlide(i); };
+    bar.appendChild(d);
   }
 }
-
-document.addEventListener('keydown', e => {
-  if (e.key === 'ArrowRight' || e.key === ' ') navigate(1);
-  if (e.key === 'ArrowLeft') navigate(-1);
-});
-
+function navigate(dir) { current = Math.max(0, Math.min(total-1, current+dir)); showSlide(current); }
+document.addEventListener('keydown', e => { if (e.key === 'ArrowRight' || e.key === ' ') navigate(1); if (e.key === 'ArrowLeft') navigate(-1); });
 showSlide(0);
 </script>
 </body>
