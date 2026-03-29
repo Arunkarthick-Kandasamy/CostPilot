@@ -9,5 +9,29 @@
     "secure": false,
     "changeOrigin": true,
     "ws": true
+  },
+  "/agent/spend": {
+    "target": "http://localhost:8001",
+    "secure": false,
+    "changeOrigin": true,
+    "pathRewrite": { "^/agent/spend": "" }
+  },
+  "/agent/sla": {
+    "target": "http://localhost:8002",
+    "secure": false,
+    "changeOrigin": true,
+    "pathRewrite": { "^/agent/sla": "" }
+  },
+  "/agent/resource": {
+    "target": "http://localhost:8003",
+    "secure": false,
+    "changeOrigin": true,
+    "pathRewrite": { "^/agent/resource": "" }
+  },
+  "/agent/finops": {
+    "target": "http://localhost:8004",
+    "secure": false,
+    "changeOrigin": true,
+    "pathRewrite": { "^/agent/finops": "" }
   }
 }
