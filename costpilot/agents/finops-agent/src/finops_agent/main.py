@@ -5,6 +5,8 @@ import os
 from contextlib import asynccontextmanager
 from datetime import datetime
 from fastapi import FastAPI
+from pydantic import BaseModel
+from typing import Optional
 from costpilot_common.config import ANTHROPIC_API_KEY
 from costpilot_common.gateway_client import save_proposal, save_insight, save_alert
 
@@ -127,11 +129,83 @@ async def run_now():
         last_run_time = datetime.utcnow()
         run_count += 1
         is_running = False
-        return {"status": "completed", "mode": "ai" if USE_AI else "demo", "findings": len(findings)}
+        return {"status": "completed", "mode": "ai" if USE_AI else "demo", "findings_count": len(findings), "findings": findings}
     except Exception as e:
         is_running = False
         logger.error("Analysis failed: %s", e)
         return {"status": "failed", "error": str(e)}
+
+
+class AnalyzeRequest(BaseModel):
+    variance_threshold_pct: float = 15.0  # flag above X%
+    max_results: int = 10
+
+
+@app.post("/analyze")
+async def analyze_with_params(req: AnalyzeRequest):
+    """Run FinOps analysis with user-configured thresholds and return results directly."""
+    from costpilot_common.database import SessionLocal
+    from sqlalchemy import text
+    db = SessionLocal()
+    results = {"budget_variances": [], "unreconciled_invoices": [], "summary": {}}
+    try:
+        # Budget variances
+        variance_threshold = 1 + req.variance_threshold_pct / 100
+        rows = db.execute(text("""
+            SELECT department, category, budgeted_amount, actual_amount,
+                   (actual_amount - budgeted_amount) as variance,
+                   ROUND(((actual_amount - budgeted_amount) / budgeted_amount * 100)::numeric, 1) as pct
+            FROM budget_vs_actual
+            WHERE period = (SELECT MAX(period) FROM budget_vs_actual)
+              AND actual_amount > budgeted_amount * :threshold
+            ORDER BY (actual_amount - budgeted_amount) DESC
+            LIMIT :lim
+        """), {"threshold": variance_threshold, "lim": req.max_results}).fetchall()
+        for r in rows:
+            results["budget_variances"].append({
+                "department": r[0],
+                "category": r[1],
+                "budgeted_amount": float(r[2]),
+                "actual_amount": float(r[3]),
+                "variance": float(r[4]),
+                "variance_pct": float(r[5])
+            })
+
+        # Unreconciled invoices
+        rows = db.execute(text("""
+            SELECT v.name, COUNT(*) as cnt, SUM(i.amount) as total
+            FROM invoices i
+            JOIN vendors v ON v.id = i.vendor_id
+            WHERE i.reconciled = false
+            GROUP BY v.name
+            ORDER BY SUM(i.amount) DESC
+            LIMIT :lim
+        """), {"lim": req.max_results}).fetchall()
+        for r in rows:
+            results["unreconciled_invoices"].append({
+                "vendor": r[0],
+                "invoice_count": r[1],
+                "total_amount": float(r[2]),
+                "potential_recovery": float(r[2]) * 0.02
+            })
+
+        total_variance = sum(v["variance"] for v in results["budget_variances"])
+        total_unreconciled = sum(u["total_amount"] for u in results["unreconciled_invoices"])
+        total_recovery = sum(u["potential_recovery"] for u in results["unreconciled_invoices"])
+        results["summary"] = {
+            "total_findings": len(results["budget_variances"]) + len(results["unreconciled_invoices"]),
+            "variances_found": len(results["budget_variances"]),
+            "unreconciled_vendors": len(results["unreconciled_invoices"]),
+            "total_budget_variance": total_variance,
+            "total_unreconciled_amount": total_unreconciled,
+            "total_potential_recovery": total_recovery,
+            "config_used": {
+                "variance_threshold_pct": req.variance_threshold_pct
+            }
+        }
+    finally:
+        db.close()
+    return results
 
 
 if __name__ == "__main__":

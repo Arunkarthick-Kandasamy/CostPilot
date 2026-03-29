@@ -5,6 +5,8 @@ import os
 from contextlib import asynccontextmanager
 from datetime import datetime
 from fastapi import FastAPI
+from pydantic import BaseModel
+from typing import Optional
 from costpilot_common.config import ANTHROPIC_API_KEY
 from costpilot_common.gateway_client import save_proposal, save_insight, save_alert
 
@@ -127,11 +129,94 @@ async def run_now():
         last_run_time = datetime.utcnow()
         run_count += 1
         is_running = False
-        return {"status": "completed", "mode": "ai" if USE_AI else "demo", "findings": len(findings)}
+        return {"status": "completed", "mode": "ai" if USE_AI else "demo", "findings_count": len(findings), "findings": findings}
     except Exception as e:
         is_running = False
         logger.error("Analysis failed: %s", e)
         return {"status": "failed", "error": str(e)}
+
+
+class AnalyzeRequest(BaseModel):
+    license_utilization_threshold: float = 60.0  # flag below X%
+    server_cpu_threshold: float = 10.0  # flag below X%
+    lookback_days: int = 7
+    max_results: int = 10
+
+
+@app.post("/analyze")
+async def analyze_with_params(req: AnalyzeRequest):
+    """Run resource analysis with user-configured thresholds and return results directly."""
+    from costpilot_common.database import SessionLocal
+    from sqlalchemy import text
+    db = SessionLocal()
+    results = {"unused_licenses": [], "idle_servers": [], "summary": {}}
+    try:
+        # Unused licenses
+        util_threshold = req.license_utilization_threshold / 100
+        rows = db.execute(text("""
+            SELECT id, name, total_licenses, used_licenses, cost_per_license,
+                   (total_licenses - used_licenses) as unused,
+                   (total_licenses - used_licenses) * cost_per_license * 12 as annual_waste,
+                   ROUND((used_licenses::numeric / NULLIF(total_licenses, 0) * 100), 1) as util_pct
+            FROM software_tools
+            WHERE total_licenses > 0
+              AND used_licenses < total_licenses * :threshold
+            ORDER BY (total_licenses - used_licenses) * cost_per_license DESC
+            LIMIT :lim
+        """), {"threshold": util_threshold, "lim": req.max_results}).fetchall()
+        for r in rows:
+            results["unused_licenses"].append({
+                "tool_name": r[1],
+                "total_licenses": r[2],
+                "used_licenses": r[3],
+                "unused_licenses": r[5],
+                "cost_per_license": float(r[4]),
+                "utilization_pct": float(r[7]) if r[7] else 0.0,
+                "annual_waste": float(r[6])
+            })
+
+        # Idle servers
+        rows = db.execute(text("""
+            SELECT s.id, s.name, s.type, s.monthly_cost,
+                   ROUND(AVG(m.cpu_pct)::numeric, 1) as avg_cpu,
+                   ROUND(AVG(m.memory_pct)::numeric, 1) as avg_mem
+            FROM servers s
+            JOIN server_metrics m ON m.server_id = s.id
+            WHERE m.recorded_at >= NOW() - MAKE_INTERVAL(days => :days)
+            GROUP BY s.id, s.name, s.type, s.monthly_cost
+            HAVING AVG(m.cpu_pct) < :cpu_thresh
+            ORDER BY s.monthly_cost DESC
+            LIMIT :lim
+        """), {"days": req.lookback_days, "cpu_thresh": req.server_cpu_threshold,
+               "lim": req.max_results}).fetchall()
+        for r in rows:
+            results["idle_servers"].append({
+                "server_name": r[1],
+                "server_type": r[2],
+                "monthly_cost": float(r[3]),
+                "annual_cost": float(r[3]) * 12,
+                "avg_cpu_pct": float(r[4]),
+                "avg_memory_pct": float(r[5])
+            })
+
+        total_license_waste = sum(l["annual_waste"] for l in results["unused_licenses"])
+        total_server_waste = sum(s["annual_cost"] for s in results["idle_servers"])
+        results["summary"] = {
+            "total_findings": len(results["unused_licenses"]) + len(results["idle_servers"]),
+            "unused_licenses_found": len(results["unused_licenses"]),
+            "idle_servers_found": len(results["idle_servers"]),
+            "total_license_waste": total_license_waste,
+            "total_server_waste": total_server_waste,
+            "total_potential_savings": total_license_waste + total_server_waste,
+            "config_used": {
+                "license_utilization_threshold": req.license_utilization_threshold,
+                "server_cpu_threshold": req.server_cpu_threshold,
+                "lookback_days": req.lookback_days
+            }
+        }
+    finally:
+        db.close()
+    return results
 
 
 if __name__ == "__main__":

@@ -5,6 +5,8 @@ import os
 from contextlib import asynccontextmanager
 from datetime import datetime
 from fastapi import FastAPI
+from pydantic import BaseModel
+from typing import Optional
 from costpilot_common.config import ANTHROPIC_API_KEY
 from costpilot_common.gateway_client import save_proposal, save_insight, save_alert
 
@@ -127,11 +129,106 @@ async def run_now():
         last_run_time = datetime.utcnow()
         run_count += 1
         is_running = False
-        return {"status": "completed", "mode": "ai" if USE_AI else "demo", "findings": len(findings)}
+        return {"status": "completed", "mode": "ai" if USE_AI else "demo", "findings_count": len(findings), "findings": findings}
     except Exception as e:
         is_running = False
         logger.error("Analysis failed: %s", e)
         return {"status": "failed", "error": str(e)}
+
+
+class AnalyzeRequest(BaseModel):
+    price_anomaly_threshold: float = 25.0  # percentage above average
+    duplicate_window_days: int = 30
+    rate_above_market_pct: float = 15.0
+    max_results: int = 10
+
+
+@app.post("/analyze")
+async def analyze_with_params(req: AnalyzeRequest):
+    """Run analysis with user-configured thresholds and return results directly."""
+    from costpilot_common.database import SessionLocal
+    from sqlalchemy import text
+    db = SessionLocal()
+    results = {"anomalies": [], "duplicates": [], "rate_issues": [], "summary": {}}
+    try:
+        # Price anomalies
+        threshold = 1 + req.price_anomaly_threshold / 100
+        rows = db.execute(text("""
+            SELECT v.name, po.item_description, ROUND(po.unit_price::numeric,0) as price,
+                   ROUND(sub.avg_price::numeric,0) as avg_price,
+                   ROUND(((po.unit_price - sub.avg_price)/sub.avg_price*100)::numeric,1) as pct_above,
+                   po.quantity, ROUND((po.unit_price - sub.avg_price)::numeric * po.quantity, 0) as total_overpay
+            FROM purchase_orders po
+            JOIN vendors v ON v.id = po.vendor_id
+            JOIN (SELECT item_description, AVG(unit_price) as avg_price
+                  FROM purchase_orders GROUP BY item_description HAVING COUNT(*)>3) sub
+                ON sub.item_description = po.item_description
+            WHERE po.unit_price > sub.avg_price * :thresh
+            ORDER BY (po.unit_price - sub.avg_price) * po.quantity DESC
+            LIMIT :lim
+        """), {"thresh": threshold, "lim": req.max_results}).fetchall()
+        for r in rows:
+            results["anomalies"].append({
+                "vendor": r[0], "item": r[1], "charged": float(r[2]),
+                "average": float(r[3]), "pct_above": float(r[4]),
+                "quantity": r[5], "overpayment": float(r[6])
+            })
+
+        # Duplicates
+        rows = db.execute(text("""
+            SELECT v.name, a.amount, COUNT(*) as times,
+                   a.amount * (COUNT(*)-1) as wasted
+            FROM invoices a
+            JOIN invoices b ON a.vendor_id=b.vendor_id AND a.amount=b.amount AND a.id<b.id
+                AND ABS(a.invoice_date - b.invoice_date) < :days
+            JOIN vendors v ON v.id = a.vendor_id
+            GROUP BY v.name, a.amount
+            ORDER BY a.amount DESC LIMIT :lim
+        """), {"days": req.duplicate_window_days, "lim": req.max_results}).fetchall()
+        for r in rows:
+            results["duplicates"].append({
+                "vendor": r[0], "amount": float(r[1]),
+                "times_billed": r[2], "wasted": float(r[3])
+            })
+
+        # Rate issues
+        rate_thresh = 1 + req.rate_above_market_pct / 100
+        rows = db.execute(text("""
+            SELECT v.name, vc.service_category, ROUND(vc.annual_cost::numeric,0) as cost,
+                   ROUND(mb.market_average::numeric,0) as market,
+                   ROUND(((vc.annual_cost-mb.market_average)/mb.market_average*100)::numeric,1) as pct,
+                   ROUND((vc.annual_cost - mb.market_average)::numeric,0) as potential_savings
+            FROM vendor_contracts vc
+            JOIN vendors v ON v.id = vc.vendor_id
+            JOIN market_benchmarks mb ON mb.service_category = vc.service_category
+            WHERE vc.annual_cost > mb.market_average * :thresh
+            ORDER BY (vc.annual_cost - mb.market_average) DESC LIMIT :lim
+        """), {"thresh": rate_thresh, "lim": req.max_results}).fetchall()
+        for r in rows:
+            results["rate_issues"].append({
+                "vendor": r[0], "category": r[1], "annual_cost": float(r[2]),
+                "market_rate": float(r[3]), "pct_above": float(r[4]),
+                "potential_savings": float(r[5])
+            })
+
+        total_anomaly_savings = sum(a["overpayment"] for a in results["anomalies"])
+        total_duplicate_waste = sum(d["wasted"] for d in results["duplicates"])
+        total_rate_savings = sum(r["potential_savings"] for r in results["rate_issues"])
+        results["summary"] = {
+            "total_findings": len(results["anomalies"]) + len(results["duplicates"]) + len(results["rate_issues"]),
+            "anomalies_found": len(results["anomalies"]),
+            "duplicates_found": len(results["duplicates"]),
+            "rate_issues_found": len(results["rate_issues"]),
+            "total_potential_savings": total_anomaly_savings + total_duplicate_waste + total_rate_savings,
+            "config_used": {
+                "price_threshold": req.price_anomaly_threshold,
+                "duplicate_window": req.duplicate_window_days,
+                "rate_threshold": req.rate_above_market_pct
+            }
+        }
+    finally:
+        db.close()
+    return results
 
 
 if __name__ == "__main__":

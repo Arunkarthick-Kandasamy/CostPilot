@@ -5,6 +5,8 @@ import os
 from contextlib import asynccontextmanager
 from datetime import datetime
 from fastapi import FastAPI
+from pydantic import BaseModel
+from typing import Optional
 from costpilot_common.config import ANTHROPIC_API_KEY
 from costpilot_common.gateway_client import save_proposal, save_insight, save_alert
 
@@ -127,11 +129,85 @@ async def run_now():
         last_run_time = datetime.utcnow()
         run_count += 1
         is_running = False
-        return {"status": "completed", "mode": "ai" if USE_AI else "demo", "findings": len(findings)}
+        return {"status": "completed", "mode": "ai" if USE_AI else "demo", "findings_count": len(findings), "findings": findings}
     except Exception as e:
         is_running = False
         logger.error("Analysis failed: %s", e)
         return {"status": "failed", "error": str(e)}
+
+
+class AnalyzeRequest(BaseModel):
+    lookback_days: int = 7
+    uptime_margin_pct: float = 1.0  # flag if within X% of target
+    response_margin_pct: float = 10.0  # flag if within X% of limit
+    max_results: int = 10
+
+
+@app.post("/analyze")
+async def analyze_with_params(req: AnalyzeRequest):
+    """Run SLA analysis with user-configured thresholds and return results directly."""
+    from costpilot_common.database import SessionLocal
+    from sqlalchemy import text
+    db = SessionLocal()
+    results = {"sla_risks": [], "summary": {}}
+    try:
+        margin = 1 + req.uptime_margin_pct / 100
+        response_margin = 1 - req.response_margin_pct / 100
+        rows = db.execute(text("""
+            WITH recent AS (
+                SELECT service_id, AVG(uptime_pct) as avg_uptime, AVG(response_time_ms) as avg_response,
+                       MIN(uptime_pct) as min_uptime, MAX(response_time_ms) as max_response
+                FROM sla_metrics WHERE recorded_at >= NOW() - MAKE_INTERVAL(days => :days)
+                GROUP BY service_id
+            )
+            SELECT s.id, s.name, s.sla_uptime_target, r.avg_uptime, s.sla_response_time_ms, r.avg_response,
+                   COALESCE(p.penalty_amount, 50000) as penalty,
+                   r.min_uptime, r.max_response
+            FROM services s
+            JOIN recent r ON r.service_id = s.id
+            LEFT JOIN sla_penalties p ON p.service_id = s.id AND p.breach_type = 'uptime'
+            WHERE r.avg_uptime < s.sla_uptime_target * :margin
+               OR r.avg_response > s.sla_response_time_ms * :resp_margin
+            ORDER BY penalty DESC
+            LIMIT :lim
+        """), {"days": req.lookback_days, "margin": margin, "resp_margin": response_margin,
+               "lim": req.max_results}).fetchall()
+        for r in rows:
+            uptime_gap = float(r[2]) - float(r[3])
+            response_gap = float(r[5]) - float(r[4])
+            if uptime_gap > 0 and response_gap > 0:
+                risk = "Critical"
+            elif uptime_gap > 0 or response_gap > 0:
+                risk = "High"
+            else:
+                risk = "Medium"
+            results["sla_risks"].append({
+                "service_name": r[1],
+                "uptime_target": float(r[2]),
+                "current_uptime": round(float(r[3]), 2),
+                "response_limit": float(r[4]),
+                "current_response": round(float(r[5]), 1),
+                "penalty_at_risk": float(r[6]),
+                "breach_risk_level": risk,
+                "min_uptime": round(float(r[7]), 2),
+                "max_response": round(float(r[8]), 1)
+            })
+
+        total_penalty = sum(r["penalty_at_risk"] for r in results["sla_risks"])
+        critical_count = sum(1 for r in results["sla_risks"] if r["breach_risk_level"] == "Critical")
+        results["summary"] = {
+            "total_services_at_risk": len(results["sla_risks"]),
+            "critical_risks": critical_count,
+            "total_penalty_exposure": total_penalty,
+            "config_used": {
+                "lookback_days": req.lookback_days,
+                "uptime_margin_pct": req.uptime_margin_pct,
+                "response_margin_pct": req.response_margin_pct
+            }
+        }
+    finally:
+        db.close()
+    return results
 
 
 if __name__ == "__main__":
