@@ -1,6 +1,7 @@
 namespace CostPilot.Gateway.Api.Endpoints;
 
 using System.Security.Claims;
+using System.IdentityModel.Tokens.Jwt;
 using CostPilot.Contracts;
 using CostPilot.Gateway.Domain.Entities;
 using CostPilot.Gateway.Domain.Enums;
@@ -37,7 +38,7 @@ public static class ProposalEndpoints
 
         group.MapGet("/{id:guid}", async (Guid id, CostPilotDbContext db) =>
         {
-            var p = await db.ActionProposals.Include(x => x.Impacts).Include(x => x.Approver)
+            var p = await db.ActionProposals.Include(x => x.Impacts)
                 .FirstOrDefaultAsync(x => x.Id == id);
             if (p is null) return Results.NotFound();
             return Results.Ok(new
@@ -45,19 +46,24 @@ public static class ProposalEndpoints
                 p.Id, AgentType = p.AgentType.ToString(), p.Title, p.Description,
                 p.EstimatedSavings, RiskLevel = p.RiskLevel.ToString(),
                 Status = p.Status.ToString(), p.Evidence, p.CreatedAt, p.ApprovedAt,
-                p.ApprovedBy, ApproverName = p.Approver?.Name, p.ExecutedAt, p.ExecutionResult,
-                Impacts = p.Impacts.Select(i => new { i.Id, i.ActualSavings, i.MeasurementPeriodStart, i.MeasurementPeriodEnd, i.RecordedAt })
+                p.ApprovedBy, p.ExecutedAt, p.ExecutionResult,
+                Impacts = p.Impacts.Select(i => new { i.Id, i.ActualSavings, i.RecordedAt })
             });
         });
 
-        group.MapPut("/{id:guid}/approve", async (Guid id, CostPilotDbContext db, IPublishEndpoint bus, ClaimsPrincipal user) =>
+        group.MapPut("/{id:guid}/approve", async (Guid id, CostPilotDbContext db, ClaimsPrincipal user) =>
         {
-            var proposal = await db.ActionProposals.FindAsync(id);
+            var proposal = await db.ActionProposals.FirstOrDefaultAsync(p => p.Id == id);
             if (proposal is null) return Results.NotFound();
             if (proposal.Status != ProposalStatus.Pending)
-                return Results.BadRequest(new { message = "Proposal is not pending" });
+                return Results.BadRequest(new { message = $"Proposal status is {proposal.Status}, expected Pending" });
 
-            var userId = Guid.Parse(user.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)!);
+            var userIdStr = user.FindFirstValue(JwtRegisteredClaimNames.Sub)
+                         ?? user.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdStr))
+                return Results.BadRequest(new { message = "Cannot determine user ID from token" });
+
+            var userId = Guid.Parse(userIdStr);
             proposal.Status = ProposalStatus.Approved;
             proposal.ApprovedBy = userId;
             proposal.ApprovedAt = DateTime.UtcNow;
@@ -65,26 +71,31 @@ public static class ProposalEndpoints
             db.AuditLogs.Add(new AuditLog
             {
                 EntityType = "ActionProposal", EntityId = id, Action = "Approved",
-                UserId = userId, Timestamp = DateTime.UtcNow
+                UserId = userId, Timestamp = DateTime.UtcNow,
+                Details = "{\"action\": \"approved\"}"
             });
 
             await db.SaveChangesAsync();
-            await bus.Publish(new ProposalDecision
-            {
-                ProposalId = id, Status = "Approved", ApprovedBy = userId, DecidedAt = DateTime.UtcNow
-            });
 
-            return Results.Ok(new { message = "Proposal approved" });
+            return Results.Ok(new
+            {
+                message = "Proposal approved",
+                id = proposal.Id,
+                status = "Approved",
+                approvedAt = proposal.ApprovedAt
+            });
         }).RequireAuthorization(policy => policy.RequireRole("Admin", "Approver"));
 
-        group.MapPut("/{id:guid}/reject", async (Guid id, CostPilotDbContext db, IPublishEndpoint bus, ClaimsPrincipal user) =>
+        group.MapPut("/{id:guid}/reject", async (Guid id, CostPilotDbContext db, ClaimsPrincipal user) =>
         {
-            var proposal = await db.ActionProposals.FindAsync(id);
+            var proposal = await db.ActionProposals.FirstOrDefaultAsync(p => p.Id == id);
             if (proposal is null) return Results.NotFound();
             if (proposal.Status != ProposalStatus.Pending)
                 return Results.BadRequest(new { message = "Proposal is not pending" });
 
-            var userId = Guid.Parse(user.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)!);
+            var userIdStr = user.FindFirstValue(JwtRegisteredClaimNames.Sub)
+                         ?? user.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = Guid.Parse(userIdStr!);
             proposal.Status = ProposalStatus.Rejected;
             proposal.ApprovedBy = userId;
             proposal.ApprovedAt = DateTime.UtcNow;
@@ -92,16 +103,12 @@ public static class ProposalEndpoints
             db.AuditLogs.Add(new AuditLog
             {
                 EntityType = "ActionProposal", EntityId = id, Action = "Rejected",
-                UserId = userId, Timestamp = DateTime.UtcNow
+                UserId = userId, Timestamp = DateTime.UtcNow,
+                Details = "{\"action\": \"rejected\"}"
             });
 
             await db.SaveChangesAsync();
-            await bus.Publish(new ProposalDecision
-            {
-                ProposalId = id, Status = "Rejected", ApprovedBy = userId, DecidedAt = DateTime.UtcNow
-            });
-
-            return Results.Ok(new { message = "Proposal rejected" });
+            return Results.Ok(new { message = "Proposal rejected", id = proposal.Id, status = "Rejected" });
         }).RequireAuthorization(policy => policy.RequireRole("Admin", "Approver"));
     }
 }

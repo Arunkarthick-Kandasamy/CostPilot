@@ -18,6 +18,9 @@ public class ProposalExecutionService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Wait for app to fully start
+        await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
+
         while (!stoppingToken.IsCancellationRequested)
         {
             try
@@ -25,60 +28,71 @@ public class ProposalExecutionService : BackgroundService
                 using var scope = _scopeFactory.CreateScope();
                 var db = scope.ServiceProvider.GetRequiredService<CostPilotDbContext>();
 
-                // Find approved proposals older than 30 seconds (simulating execution delay)
                 var cutoff = DateTime.UtcNow.AddSeconds(-30);
-                var approvedProposals = await db.ActionProposals
-                    .Where(p => p.Status == ProposalStatus.Approved && p.ApprovedAt != null && p.ApprovedAt < cutoff)
+
+                // Use raw SQL to avoid EF Core jsonb deserialization issues
+                var approvedIds = await db.Database
+                    .SqlQueryRaw<Guid>(
+                        @"SELECT ""Id"" AS ""Value"" FROM ""ActionProposals""
+                          WHERE ""Status"" = 'Approved'
+                            AND ""ApprovedAt"" IS NOT NULL
+                            AND ""ApprovedAt"" < {0}
+                            AND ""EstimatedSavings"" > 0", cutoff)
                     .ToListAsync(stoppingToken);
 
-                foreach (var proposal in approvedProposals)
+                foreach (var id in approvedIds)
                 {
-                    proposal.Status = ProposalStatus.Executed;
-                    proposal.ExecutedAt = DateTime.UtcNow;
-                    proposal.ExecutionResult = System.Text.Json.JsonSerializer.Serialize(new
+                    try
                     {
-                        executedBy = "CostPilot Automation Engine",
-                        timestamp = DateTime.UtcNow,
-                        actions = new[] {
-                            $"Validated proposal: {proposal.Title}",
-                            "Verified preconditions met",
-                            "Executed corrective action",
-                            "Verified post-conditions",
-                            "Recorded financial impact"
-                        }
-                    });
+                        var random = new Random();
 
-                    // Record financial impact (actual savings with some variance)
-                    var random = new Random();
-                    var actualSavings = proposal.EstimatedSavings * (decimal)(0.75 + random.NextDouble() * 0.35);
-                    db.CostImpacts.Add(new CostImpact
+                        // Get estimated savings
+                        var savings = await db.Database
+                            .SqlQueryRaw<decimal>(
+                                @"SELECT ""EstimatedSavings"" AS ""Value"" FROM ""ActionProposals"" WHERE ""Id"" = {0}", id)
+                            .FirstAsync(stoppingToken);
+
+                        var actualSavings = Math.Round(savings * (decimal)(0.75 + random.NextDouble() * 0.35), 2);
+
+                        // Update proposal via raw SQL
+                        await db.Database.ExecuteSqlRawAsync(
+                            @"UPDATE ""ActionProposals""
+                              SET ""Status"" = 'Executed',
+                                  ""ExecutedAt"" = NOW(),
+                                  ""ExecutionResult"" = {0}::jsonb
+                              WHERE ""Id"" = {1}",
+                            $"{{\"executedBy\":\"CostPilot Automation\",\"timestamp\":\"{DateTime.UtcNow:O}\"}}",
+                            id);
+
+                        // Insert cost impact
+                        var impactId = Guid.NewGuid();
+                        await db.Database.ExecuteSqlRawAsync(
+                            @"INSERT INTO ""CostImpacts"" (""Id"", ""ProposalId"", ""ActualSavings"",
+                              ""MeasurementPeriodStart"", ""MeasurementPeriodEnd"", ""Evidence"", ""RecordedAt"")
+                              VALUES ({0}, {1}, {2}, {3}, {4}, {5}::jsonb, NOW())",
+                            impactId, id, actualSavings,
+                            DateOnly.FromDateTime(DateTime.UtcNow),
+                            DateOnly.FromDateTime(DateTime.UtcNow.AddMonths(1)),
+                            $"{{\"method\":\"automated\",\"variance\":{Math.Round((double)(actualSavings / savings * 100 - 100), 1)}}}");
+
+                        // Audit log
+                        await db.Database.ExecuteSqlRawAsync(
+                            @"INSERT INTO ""AuditLogs"" (""Id"", ""EntityType"", ""EntityId"", ""Action"", ""Details"", ""Timestamp"")
+                              VALUES ({0}, 'ActionProposal', {1}, 'AutoExecuted', {2}::jsonb, NOW())",
+                            Guid.NewGuid(), id,
+                            $"{{\"actualSavings\":{actualSavings}}}");
+
+                        _logger.LogInformation("Auto-executed proposal {Id} -> Savings: ${Savings:F0}", id, actualSavings);
+                    }
+                    catch (Exception ex)
                     {
-                        ProposalId = proposal.Id,
-                        ActualSavings = Math.Round(actualSavings, 2),
-                        MeasurementPeriodStart = DateOnly.FromDateTime(DateTime.UtcNow),
-                        MeasurementPeriodEnd = DateOnly.FromDateTime(DateTime.UtcNow.AddMonths(1)),
-                        Evidence = System.Text.Json.JsonSerializer.Serialize(new { method = "automated_measurement", variance = Math.Round((double)(actualSavings / proposal.EstimatedSavings * 100 - 100), 1) }),
-                        RecordedAt = DateTime.UtcNow
-                    });
-
-                    db.AuditLogs.Add(new AuditLog
-                    {
-                        EntityType = "ActionProposal",
-                        EntityId = proposal.Id,
-                        Action = "AutoExecuted",
-                        Details = $"Automatically executed after approval. Actual savings: ${actualSavings:F2}",
-                        Timestamp = DateTime.UtcNow
-                    });
-
-                    _logger.LogInformation("Auto-executed proposal: {Title} -> Savings: ${Savings}", proposal.Title, actualSavings);
+                        _logger.LogError(ex, "Failed to execute proposal {Id}", id);
+                    }
                 }
-
-                if (approvedProposals.Count > 0)
-                    await db.SaveChangesAsync(stoppingToken);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in proposal execution service");
+                _logger.LogError(ex, "Error in proposal execution service loop");
             }
 
             await Task.Delay(TimeSpan.FromSeconds(15), stoppingToken);
